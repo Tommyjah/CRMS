@@ -1,36 +1,46 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Project Approval System
+
+A professional, type-safe system for managing and tracking project change requests, built with Next.js, Supabase, and Tailwind CSS.
+
+## Key Features
+- **Project Dashboard:** Centralized view of all project change requests.
+- **Dynamic Change Request Form:** Real-time form with support for multiple activities, unit tracking, and logic for calculating differences.
+- **Automated PDF Reporting:** One-click generation of professional project status reports.
+- **Secure Authentication:** Protected routes ensuring only authorized access to sensitive project data.
+- **Full Type Safety:** Automated schema synchronization between Supabase and the frontend.
 
 ## Getting Started
 
-First, run the development server:
+1. **Install dependencies:**
+   ```bash
+   pnpm install
+   
+2.  Environment Configuration:
+Create a .env.local file in the project root and add your Supabase credentials:
+NEXT_PUBLIC_SUPABASE_URL=your_project_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_project_api_key
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
+3.  Database Sync:
+To synchronize your local TypeScript types with your Supabase schema, run:
+npx supabase gen types typescript --project-id <YOUR_PROJECT_ID> > types_db.ts
+
+4.  Run the development server:
 pnpm dev
-# or
-bun dev
-```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+5.  Production Build:
+To verify the production build locally, run:
+pnpm run build
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Technology Stack
+Framework: Next.js (App Router)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Database/Auth: Supabase
 
-## Learn More
+Styling: Tailwind CSS
 
-To learn more about Next.js, take a look at the following resources:
+PDF Generation: jspdf / jspdf-autotable
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Language: TypeScript
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Deployment
+This project is optimized for deployment on the Vercel Platform. Ensure you add the same environment variables defined in your .env.local to your Vercel project settings under "Environment Variables".
