@@ -10,7 +10,7 @@ interface Activity {
   reason: string;
 }
 
-export const generatePdf = async (request: any, activities: Activity[]) => {
+export const generatePdf = async (request: any, activities: any[]) => {
   const doc = new jsPDF();
 
   // 1. ADD LOGO
@@ -49,14 +49,15 @@ export const generatePdf = async (request: any, activities: Activity[]) => {
   ]);
 
   // Use the explicit autoTable function
-  autoTable(doc, { 
-    startY: 60,
-    head: [['S/No', 'Activity', 'Unit', 'Contract Qty', 'Executed Qty', 'Reason']],
-    body: tableData,
-    theme: 'striped',
-    headStyles: { fillColor: [41, 128, 185] },
-  });
+  // Add this line right above the autoTable call
+// @ts-ignore
+autoTable(doc, { 
+  startY: 60,
+  head: [['S/No', 'Activity', 'Unit', 'Contract Qty', 'Executed Qty', 'Reason']],
+  body: activities.map((item, index) => [
+    index + 1, item.activity, item.unit, item.contract_qty, item.executed_qty, item.reason
+  ]),
+});
 
-  // 4. SAVE
-  doc.save(`Change_Request_${request.project_number}.pdf`);
+doc.save(`Change_Request_${request.project_number}.pdf`);
 };
