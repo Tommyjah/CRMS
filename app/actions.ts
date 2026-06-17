@@ -46,6 +46,22 @@ export async function createChangeRequest(formData: FormData, activities: { seri
   return { success: true }
 }
 
+export async function getRequestActivities(requestId: string) {
+  const supabase = await createClient()
+
+  const { data, error } = await supabase
+    .from('request_activities')
+    .select('serial_number, activity, unit, contract_qty, executed_qty, reason')
+    .eq('request_id', requestId)
+    .order('serial_number', { ascending: true })
+
+  if (error) {
+    return { error: error.message, data: null }
+  }
+
+  return { error: null, data: (data ?? []) as { serial_number: number; activity: string; unit: string | null; contract_qty: string | null; executed_qty: string | null; reason: string | null }[] }
+}
+
 export async function updateRequestStatus(requestId: string, status: 'APPROVED' | 'REJECTED') {
   const supabase = await createClient()
 

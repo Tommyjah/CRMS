@@ -1,12 +1,12 @@
 'use client'
 
 import { useState } from 'react'
-import { supabase } from '@/lib/supabase'
 import type { ChangeRequest, RequestAuditLog } from '@/lib/supabase'
 import type { RequestWithAudit } from '@/hooks/useChangeRequests'
 import { ROLE_ACCESS } from '@/hooks/useChangeRequests'
 import StatusButtons from '@/components/StatusButtons'
 import { generatePdf } from '@/lib/generatePdf'
+import { getRequestActivities } from '@/app/actions'
 
 type ChangeRequestWithDetails = ChangeRequest & {
   project_number?: string | null
@@ -194,14 +194,10 @@ export default function ChangeRequestRow({
     setPdfError(null)
 
     try {
-      const { data: activities, error } = await supabase
-        .from('request_activities')
-        .select('serial_number, activity, unit, contract_qty, executed_qty, reason')
-        .eq('request_id', req.id)
-        .order('serial_number', { ascending: true })
+      const { data: activities, error } = await getRequestActivities(req.id)
 
       if (error) {
-        throw new Error(error.message)
+        throw new Error(error)
       }
 
       const requestForPdf = {
@@ -241,7 +237,7 @@ export default function ChangeRequestRow({
   ]
 
   return (
-    <div className={`rounded-xl border bg-white shadow-sm transition hover:shadow-md ${stale ? 'border-red-300' : 'border-gray-200'}`}>
+    <div className={`rounded-xl border bg-white shadow-sm transition hover:shadow-md ${stale ? 'border-red-300' : 'border-gray-200'}`} suppressHydrationWarning={true}>
       <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
