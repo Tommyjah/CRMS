@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { createClientBrowser } from '@/lib/client'
+import { createClientBrowser } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 
 type Mode = 'login' | 'signup'
