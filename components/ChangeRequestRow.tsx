@@ -1,13 +1,13 @@
 'use client'
-
+import { generatePdf, RequestData, Activity } from '@/lib/generatePdf';
 // 1. Add this import at the top
-import { supabase } from '@/lib/client/client';
+import { supabase } from '@/lib/supabase/client';
 import { useState } from 'react'
-import type { ChangeRequest, RequestAuditLog } from '@/lib/client'
+import type { ChangeRequest, RequestAuditLog } from '@/lib/supabase/client.ts'
 import type { RequestWithAudit } from '@/hooks/useChangeRequests'
 import { ROLE_ACCESS } from '@/hooks/useChangeRequests'
 import StatusButtons from '@/components/StatusButtons'
-import { generatePdf } from '@/lib/generatePdf'
+
 import { getRequestActivities } from '@/app/actions'
 
 type ChangeRequestWithDetails = ChangeRequest & {
@@ -199,13 +199,17 @@ export default function ChangeRequestRow({
     try {
       const { data: activities, error } = await getRequestActivities(req.id)
 
+      // 👇 ADD THIS TEMPORARY DEBUG LOG
+      console.log("PDF Debug - Request ID:", req.id, "Fetched Activities:", activities);
+      
       if (error) {
         throw new Error(error)
       }
 
-      const requestForPdf = {
+      // 1. Explicitly apply the RequestData type definition
+      const requestForPdf: RequestData = {
         id: req.id,
-        project_name: req.project_name,
+        project_name: req.project_name ?? '—',
         project_number: projectNumber,
         initiated_by: initiator,
         change_description: description ?? '',
@@ -216,12 +220,17 @@ export default function ChangeRequestRow({
 
       const typedActivities = (activities ?? []) as RequestActivityForPdf[]
 
-      const activitiesForPdf = typedActivities.map((activity) => ({
-        ...activity,
-        difference: getDifference(activity.contract_qty, activity.executed_qty),
+      // 2. Map and cast data strictly to clear the types mismatch errors
+      const activitiesForPdf: Activity[] = typedActivities.map((activity) => ({
+        activity: activity.activity,
+        unit: activity.unit ?? '—',                       // Handle potential null
+        contract_qty: Number(activity.contract_qty) || 0, // Convert string/null to number
+        executed_qty: Number(activity.executed_qty) || 0, // Convert string/null to number
+        reason: activity.reason ?? '—',                   // Handle potential null
       }))
 
-      generatePdf(requestForPdf, activitiesForPdf)
+      // 3. Added 'await' here since generatePdf is an async function
+      await generatePdf(requestForPdf, activitiesForPdf)
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to generate PDF'
       setPdfError(message)
@@ -230,7 +239,7 @@ export default function ChangeRequestRow({
       setIsGeneratingPdf(false)
     }
   }
-
+  
   const statusOptions = [
     { value: 'PENDING_DEPT_1', label: 'Pending Dept 1' },
     { value: 'PENDING_DEPT_2', label: 'Pending Dept 2' },
