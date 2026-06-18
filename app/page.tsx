@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useChangeRequests, type RequestWithAudit } from '@/hooks/useChangeRequests'
-import type { RequestAuditLog } from '@/lib/supabase'
+import type { RequestAuditLog } from '@/lib/client'
 import ChangeRequestRow from '@/components/ChangeRequestRow'
 
 function StatusBadge({ status }: { status: string | null }) {

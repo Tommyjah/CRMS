@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { createClientBrowser } from '@/lib/supabase'
+import { createClientBrowser } from '@/lib/client'
 import { useRouter } from 'next/navigation'
 
 export default function SettingsPage() {

@@ -1,7 +1,9 @@
 'use client'
 
+// 1. Add this import at the top
+import { supabase } from '@/lib/client/client';
 import { useState } from 'react'
-import type { ChangeRequest, RequestAuditLog } from '@/lib/supabase'
+import type { ChangeRequest, RequestAuditLog } from '@/lib/client'
 import type { RequestWithAudit } from '@/hooks/useChangeRequests'
 import { ROLE_ACCESS } from '@/hooks/useChangeRequests'
 import StatusButtons from '@/components/StatusButtons'
@@ -175,7 +177,8 @@ export default function ChangeRequestRow({
 
     setIsLoading(true)
     try {
-      const { data } = await supabase
+
+ const { data } = await supabase
         .from('request_audit_log')
         .select('*')
         .eq('request_id', id)

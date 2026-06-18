@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { supabase } from '@/lib/supabase'
+import { supabase } from '@/lib/client'
 import { useRouter, usePathname } from 'next/navigation'
 
 export default function Navbar() {

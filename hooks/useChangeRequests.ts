@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react'
-import { supabase } from '@/lib/supabase'
-import type { ChangeRequest, RequestAuditLog } from '@/lib/supabase'
+import { supabase } from '@/lib/client'
+import type { ChangeRequest, RequestAuditLog } from '@/lib/client'
 
 export type RequestWithAudit = ChangeRequest
 
