@@ -1,6 +1,5 @@
 // lib/generatePdf.ts
 import { jsPDF } from 'jspdf'
-import autoTable from 'jspdf-autotable'
 
 export interface RequestData {
   id: string
@@ -22,6 +21,7 @@ export interface Activity {
 }
 
 export async function generatePdf(request: RequestData, activities: Activity[]) {
+  const autoTable = (await import('jspdf-autotable')).default
   try {
     const doc = new jsPDF({
       orientation: 'portrait',
@@ -143,27 +143,25 @@ export async function generatePdf(request: RequestData, activities: Activity[]) 
       body: tableRows,
       theme: 'grid',
       headStyles: {
-        fillColor: [0, 102, 204], 
+        fillColor: [0, 102, 204],
         textColor: [255, 255, 255],
         fontStyle: 'bold',
         halign: 'center',
       },
-      // Adjusted column widths to prevent the "Difference" column from sliding out
       columnStyles: {
-        0: { halign: 'center', cellWidth: 12 }, // S/No
-        1: { halign: 'left' },                  // Activity (Flexible Auto-width)
-        2: { halign: 'center', cellWidth: 16 }, // Unit
-        3: { halign: 'right', cellWidth: 22 },  // Contract Qty
-        4: { halign: 'right', cellWidth: 22 },  // Executed Qty
-        5: { halign: 'right', cellWidth: 22 },  // Difference
-        6: { halign: 'left' },                  // Reason (Flexible Auto-width)
+        0: { halign: 'center', cellWidth: 12 },
+        1: { halign: 'left' },
+        2: { halign: 'center', cellWidth: 16 },
+        3: { halign: 'right', cellWidth: 22 },
+        4: { halign: 'right', cellWidth: 22 },
+        5: { halign: 'right', cellWidth: 22 },
+        6: { halign: 'left' },
       },
       styles: {
         font: 'helvetica',
         fontSize: 9,
       },
       didDrawPage: () => {
-        // --- 5. FOOTER SIGNATURE MARKS ---
         const footerY = doc.internal.pageSize.getHeight() - 25
         doc.setFont('helvetica', 'bold')
         doc.setFontSize(10)

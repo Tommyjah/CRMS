@@ -4,7 +4,24 @@ import { useState } from 'react'
 import { supabase } from '@/lib/supabase/client'
 import { useRouter, usePathname } from 'next/navigation'
 
-export default function Navbar() {
+const NavLink = ({
+  href,
+  label,
+  isActive,
+  onClick,
+}: { href: string; label: string; isActive: boolean; onClick: () => void }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    className={`text-sm ${
+      isActive ? 'font-semibold text-gray-900' : 'text-gray-700 hover:text-gray-900'
+    }`}
+  >
+    {label}
+  </button>
+)
+
+function Navbar() {
   const router = useRouter()
   const pathname = usePathname()
   const [open, setOpen] = useState(false)
@@ -22,20 +39,6 @@ export default function Navbar() {
     router.refresh()
   }
 
-  const NavLink = ({ href, label }: { href: string; label: string }) => (
-    <button
-      type="button"
-      onClick={() => router.push(href)}
-      className={`text-sm ${
-        isActive(href)
-          ? 'font-semibold text-gray-900'
-          : 'text-gray-700 hover:text-gray-900'
-      }`}
-    >
-      {label}
-    </button>
-  )
-
   return (
     <nav className="border-b border-gray-200 bg-white">
       <div className="mx-auto max-w-5xl px-4 py-3 sm:px-6 lg:px-8">
@@ -43,10 +46,27 @@ export default function Navbar() {
           <button type="button" onClick={() => router.push('/')} className="text-lg font-semibold text-gray-900">CRMS</button>
 
           <div className="hidden gap-6 sm:flex">
-            <NavLink href="/" label="Dashboard" />
-            <NavLink href="/profile" label="Profile" />
-            <NavLink href="/settings" label="Settings" />
-            <button type="button" onClick={handleLogout} className="text-sm text-red-600 hover:text-red-700">Log out</button>
+            <NavLink
+              href="/"
+              label="Dashboard"
+              isActive={isActive('/')}
+              onClick={() => router.push('/')}
+            />
+            <NavLink
+              href="/profile"
+              label="Profile"
+              isActive={isActive('/profile')}
+              onClick={() => router.push('/profile')}
+            />
+            <NavLink
+              href="/settings"
+              label="Settings"
+              isActive={isActive('/settings')}
+              onClick={() => router.push('/settings')}
+            />
+            <button type="button" onClick={handleLogout} className="text-sm text-red-600 hover:text-red-700">
+              Log out
+            </button>
           </div>
 
           <button type="button" className="sm:hidden" onClick={() => setOpen((prev) => !prev)}>
@@ -58,13 +78,39 @@ export default function Navbar() {
 
         {open && (
           <div className="mt-3 space-y-2 sm:hidden">
-            <button type="button" onClick={() => { router.push('/'); setOpen(false) }} className="block w-full rounded-lg px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50">Dashboard</button>
-            <button type="button" onClick={() => { router.push('/profile'); setOpen(false) }} className="block w-full rounded-lg px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50">Profile</button>
-            <button type="button" onClick={() => { router.push('/settings'); setOpen(false) }} className="block w-full rounded-lg px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50">Settings</button>
-            <button type="button" onClick={handleLogout} className="block w-full rounded-lg px-3 py-2 text-left text-sm text-red-600 hover:text-red-700">Log out</button>
+            <button
+              type="button"
+              onClick={() => { router.push('/'); setOpen(false) }}
+              className="block w-full rounded-lg px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
+            >
+              Dashboard
+            </button>
+            <button
+              type="button"
+              onClick={() => { router.push('/profile'); setOpen(false) }}
+              className="block w-full rounded-lg px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
+            >
+              Profile
+            </button>
+            <button
+              type="button"
+              onClick={() => { router.push('/settings'); setOpen(false) }}
+              className="block w-full rounded-lg px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
+            >
+              Settings
+            </button>
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="block w-full rounded-lg px-3 py-2 text-left text-sm text-red-600 hover:text-red-700"
+            >
+              Log out
+            </button>
           </div>
         )}
       </div>
     </nav>
   )
 }
+
+export default Navbar

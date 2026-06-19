@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useChangeRequests, type RequestWithAudit } from '@/hooks/useChangeRequests'
 import type { RequestAuditLog } from '@/lib/supabase/client'
 import ChangeRequestRow from '@/components/ChangeRequestRow'
+import OnboardingModal from '@/components/OnboardingModal'
 
 function StatusBadge({ status }: { status: string | null }) {
   const base = 'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset'
@@ -158,6 +159,7 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50" suppressHydrationWarning={true}>
+      <OnboardingModal />
       <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between gap-4">
           <h1 className="text-2xl font-bold text-gray-900 sm:text-3xl">Project Approvals</h1>
@@ -201,3 +203,5 @@ export default function Dashboard() {
     </div>
   )
 }
+
+

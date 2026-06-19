@@ -1,4 +1,4 @@
 declare module 'jspdf-autotable' {
-    const autoTable: any;
-    export default autoTable;
-  }
+  const autoTable: any
+  export default autoTable
+}

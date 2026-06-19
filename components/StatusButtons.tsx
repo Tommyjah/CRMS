@@ -12,7 +12,7 @@ type StatusButtonsProps = {
 export default function StatusButtons({ requestId, canApprove, onRejected }: StatusButtonsProps) {
   const [loading, setLoading] = useState(false)
 
-  const handleStatusUpdate = async (status: 'APPROVED' | 'REJECTED') => {
+  const handleStatusUpdate = async (status: 'APPROVE' | 'REJECT') => {
     setLoading(true)
     try {
       const result = await updateRequestStatus(requestId, status)
@@ -22,7 +22,7 @@ export default function StatusButtons({ requestId, canApprove, onRejected }: Sta
         return
       }
 
-      if (status === 'REJECTED') {
+      if (status === 'REJECT') {
         onRejected?.()
       }
     } catch (err) {
@@ -36,7 +36,7 @@ export default function StatusButtons({ requestId, canApprove, onRejected }: Sta
     <div className="flex gap-2">
       <button
         type="button"
-        onClick={() => handleStatusUpdate('APPROVED')}
+        onClick={() => handleStatusUpdate('APPROVE')}
         disabled={loading || !canApprove}
         className="rounded-lg bg-green-600 px-3 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
       >
@@ -44,7 +44,7 @@ export default function StatusButtons({ requestId, canApprove, onRejected }: Sta
       </button>
       <button
         type="button"
-        onClick={() => handleStatusUpdate('REJECTED')}
+        onClick={() => handleStatusUpdate('REJECT')}
         disabled={loading}
         className="rounded-lg bg-red-600 px-3 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
       >
