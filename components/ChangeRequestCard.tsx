@@ -14,23 +14,24 @@ interface ChangeRequestCardProps {
 }
 
 export function ChangeRequestCard({ request, userProfile, onApprove, onReject }: ChangeRequestCardProps) {
-  // 1. Safe lookup of the current stage configuration
-  const statusConfig = ROLE_ACCESS[request?.status ?? '']
+  // 1. Safe lookup of the current stage configuration with fallback
+  const statusConfig = ROLE_ACCESS[request?.status ?? ''] ?? ROLE_ACCESS.DRAFT
 
-  // 2. Normalize values to prevent capitalization/whitespace mismatches or null-traps
-  const currentUserRole = userProfile?.role?.trim().toUpperCase()
-  const currentUserDept = userProfile?.department?.trim().toUpperCase()
-  const targetStageDept = statusConfig?.department?.trim().toUpperCase()
+  // 2. Normalize values for comparison (preserve case to match ROLE_ACCESS mapping)
+  const currentUserRole = userProfile?.role?.trim()
+  const currentUserDept = userProfile?.department?.trim()
+  const targetStageDept = statusConfig?.department?.trim() ?? ''
 
-  // 3. Validate credentials defensively
-  const isTargetApprover = 
-    currentUserRole === 'APPROVER' && 
-    !!currentUserDept &&              // 👈 Ensures user department is not null/empty
-    !!targetStageDept &&              // 👈 Ensures status target department is not null/empty
-    currentUserDept === targetStageDept // 👈 Exact sanitized string match
+  // 3. Validate credentials defensively - user must be APPROVER with exact department match
+  const isTargetApprover =
+    !!currentUserRole &&
+    currentUserRole.toUpperCase() === 'APPROVER' &&
+    !!currentUserDept &&
+    !!targetStageDept &&
+    currentUserDept === targetStageDept
 
   // 4. Unlock button only if the state allows approval and credentials match
-  const isButtonActive = statusConfig?.canApprove && isTargetApprover
+  const isButtonActive = !!statusConfig?.canApprove && isTargetApprover
 
   return (
     <div className="p-5 border rounded-xl shadow-sm bg-white border-gray-200 flex flex-col gap-3">
@@ -38,7 +39,7 @@ export function ChangeRequestCard({ request, userProfile, onApprove, onReject }:
         <div>
           <h3 className="text-lg font-bold text-gray-900">{request?.project_name || 'Unnamed Project'}</h3>
           <p className="text-xs text-gray-500 font-mono">
-            ID: #{request?.project_number || request?.id?.slice(0, 8)} | From: {request?.initiator_name || 'Unknown'}
+            ID: #{request?.project_number || request?.id?.slice(0, 8)} | From: {request?.initiated_by || 'Unknown'}
           </p>
         </div>
         <span className={`px-2.5 py-1 text-xs font-semibold rounded-full ${
@@ -46,7 +47,7 @@ export function ChangeRequestCard({ request, userProfile, onApprove, onReject }:
           request?.status === 'REJECTED' ? 'bg-red-100 text-red-800' : 
           'bg-blue-100 text-blue-800'
         }`}>
-          {request?.status?.replace('_', ' ') || 'PENDING'}
+          {statusConfig?.label || request?.status?.replace('_', ' ') || 'PENDING'}
         </span>
       </div>
 
@@ -65,7 +66,7 @@ export function ChangeRequestCard({ request, userProfile, onApprove, onReject }:
               : 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200'
           }`}
         >
-          {isButtonActive ? '⚡ Approve' : `⏱️ Awaiting ${statusConfig?.department || 'Next Stage'}`}
+          {isButtonActive ? '⚡ Approve' : `⏱️ Awaiting ${statusConfig?.label || 'Next Stage'}`}
         </button>
 
         {isButtonActive && onReject && (

@@ -9,26 +9,29 @@ export type RequestWithAudit = ChangeRequest
 
 export const ROLE_ACCESS: Record<
   string,
-  { department: string; canApprove: boolean; locked: boolean }
+  { department: string | null; canApprove: boolean; locked: boolean; label: string }
 > = {
-  DRAFT: { department: 'Initiator', canApprove: false, locked: false },
+  DRAFT: { department: null, canApprove: false, locked: false, label: 'Initiator' },
   PENDING_DEPT_1: {
     department: 'Fixed Network',
     canApprove: true,
     locked: true,
+    label: 'Fixed Network Review',
   },
   PENDING_DEPT_2: {
     department: 'Wire Line Planning',
     canApprove: true,
     locked: true,
+    label: 'Wire Line Planning Review',
   },
   PENDING_DEPT_3: {
     department: 'Engineering',
     canApprove: true,
     locked: true,
+    label: 'Engineering Review',
   },
-  APPROVED: { department: 'Complete', canApprove: false, locked: true },
-  REJECTED: { department: 'Complete', canApprove: false, locked: true },
+  APPROVED: { department: null, canApprove: false, locked: true, label: 'Approved' },
+  REJECTED: { department: null, canApprove: false, locked: true, label: 'Rejected' },
 }
 
 function calculateLagHours(request: RequestWithAudit): number {

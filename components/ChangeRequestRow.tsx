@@ -28,7 +28,8 @@ type RequestActivityForPdf = {
 }
 
 function StatusBadge({ status }: { status: string | null }) {
-  const base = 'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset'
+  const access = ROLE_ACCESS[status ?? ''] ?? ROLE_ACCESS.DRAFT
+  const base = 'inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ring-1 ring-inset'
   const styles: Record<string, string> = {
     DRAFT: `${base} bg-gray-50 text-gray-800 ring-gray-600/30`,
     PENDING_DEPT_1: `${base} bg-yellow-50 text-yellow-800 ring-yellow-600/30`,
@@ -37,7 +38,7 @@ function StatusBadge({ status }: { status: string | null }) {
     APPROVED: `${base} bg-green-50 text-green-800 ring-green-600/30`,
     REJECTED: `${base} bg-red-50 text-red-800 ring-red-600/30`,
   }
-  return <span className={styles[status ?? ''] ?? `${base} bg-gray-50 text-gray-800 ring-gray-600/30`}>{status ?? 'UNKNOWN'}</span>
+  return <span className={styles[status ?? ''] ?? `${base} bg-gray-50 text-gray-800 ring-gray-600/30`}>{access?.label || 'UNKNOWN'}</span>
 }
 
 function LagBadge({ hours }: { hours: number }) {
@@ -52,6 +53,14 @@ function LagBadge({ hours }: { hours: number }) {
 function DepartmentTimeline({ status, auditLogs }: { status: string | null; auditLogs: RequestAuditLog[] | undefined }) {
   const steps = ['DRAFT', 'PENDING_DEPT_1', 'PENDING_DEPT_2', 'PENDING_DEPT_3', 'APPROVED']
   const completed = auditLogs?.map((entry) => entry.new_status).filter(Boolean) as string[] ?? []
+
+  const stageLabels: Record<string, string> = {
+    DRAFT: 'Initiator',
+    PENDING_DEPT_1: 'Fixed Network Review',
+    PENDING_DEPT_2: 'Wire Line Planning Review',
+    PENDING_DEPT_3: 'Engineering Review',
+    APPROVED: 'Approved',
+  }
 
   return (
     <ol className="mt-4 space-y-2">
@@ -78,7 +87,7 @@ function DepartmentTimeline({ status, auditLogs }: { status: string | null; audi
                     : 'text-sm text-gray-500'
               }
             >
-              {step.replace(/PENDING_/, '').replace(/DEPT_/, 'Dept ')}
+              {stageLabels[step] || step}
             </span>
             {isCurrent && <span className="text-xs text-gray-500">(current)</span>}
           </li>
@@ -127,23 +136,13 @@ function formatDate(value: string | null | undefined) {
   return new Date(value).toLocaleString()
 }
 
-function getDifference(contractQty: string | null, executedQty: string | null) {
-  const contractValue = Number(contractQty)
-  const executedValue = Number(executedQty)
-
-  if (!Number.isFinite(contractValue) || !Number.isFinite(executedValue)) {
-    return ''
-  }
-
-  return String(contractValue - executedValue)
-}
-
 type ChangeRequestRowProps = {
   req: ChangeRequestWithDetails
   calculateLagHours: (req: RequestWithAudit) => number
   onStatusChange: (id: string, status: string | null) => void
   expandedId: string | null
   setExpandedId: (id: string | null) => void
+  userProfile: { department: string | null; role: string | null } | null
 }
 
 export default function ChangeRequestRow({
@@ -152,6 +151,7 @@ export default function ChangeRequestRow({
   onStatusChange,
   expandedId,
   setExpandedId,
+  userProfile,
 }: ChangeRequestRowProps) {
   const [auditLogs, setAuditLogs] = useState<RequestAuditLog[] | null>(null)
   const [isLoading, setIsLoading] = useState(false)
@@ -159,6 +159,7 @@ export default function ChangeRequestRow({
   const [pdfError, setPdfError] = useState<string | null>(null)
 
   const access = ROLE_ACCESS[req.status ?? ''] ?? ROLE_ACCESS.DRAFT
+  
   const lagHours = calculateLagHours(req)
   const stale = lagHours > 48
   const projectNumber = req.project_number ?? '—'
@@ -241,9 +242,9 @@ export default function ChangeRequestRow({
   }
   
   const statusOptions = [
-    { value: 'PENDING_DEPT_1', label: 'Pending Dept 1' },
-    { value: 'PENDING_DEPT_2', label: 'Pending Dept 2' },
-    { value: 'PENDING_DEPT_3', label: 'Pending Dept 3' },
+    { value: 'PENDING_DEPT_1', label: 'Fixed Network Review' },
+    { value: 'PENDING_DEPT_2', label: 'Wire Line Planning Review' },
+    { value: 'PENDING_DEPT_3', label: 'Engineering Review' },
     { value: 'APPROVED', label: 'Approved' },
     { value: 'REJECTED', label: 'Rejected' },
   ]
@@ -272,7 +273,7 @@ export default function ChangeRequestRow({
             </div>
             <div>
               <span className="font-medium text-gray-500">Current holder:</span>{' '}
-              {access.department}
+              {access.department || '—'}
             </div>
           </div>
           {description && (
@@ -316,7 +317,7 @@ export default function ChangeRequestRow({
               </option>
             ))}
           </select>
-          <StatusButtons requestId={req.id} canApprove={access.canApprove} />
+          <StatusButtons requestId={req.id} status={req.status} userProfile={userProfile} />
         </div>
       </div>
 
