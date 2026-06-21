@@ -119,27 +119,35 @@ export default function ChangeRequestDrawer({ request, isOpen, onClose }: Change
                   <h3 className="text-sm font-semibold text-gray-900">Technical Specifications</h3>
                   <div className="grid grid-cols-2 gap-4 rounded-lg border border-gray-200 bg-gray-50 p-4">
                     <div>
-                      <span className="text-xs font-medium text-gray-500">Original Design</span>
-                      <p className="mt-1 text-sm text-gray-900">—</p>
+                      <span className="text-xs font-medium text-gray-500">Site Coordinates</span>
+                      <p className="mt-1 text-sm text-gray-900">{request?.site_coordinates || '—'}</p>
                     </div>
                     <div>
-                      <span className="text-xs font-medium text-gray-500">Proposed Change</span>
-                      <p className="mt-1 text-sm text-gray-900 whitespace-pre-wrap">{request?.change_description || '—'}</p>
+                      <span className="text-xs font-medium text-gray-500">Route Impact</span>
+                      <p className="mt-1 text-sm text-gray-900">{request?.route_impact || '—'}</p>
                     </div>
                     <div>
                       <span className="text-xs font-medium text-gray-500">Duct Sizes</span>
-                      <p className="mt-1 text-sm text-gray-900">—</p>
+                      <p className="mt-1 text-sm text-gray-900">{request?.duct_sizes || '—'}</p>
                     </div>
                     <div>
-                      <span className="text-xs font-medium text-gray-500">Material Required</span>
-                      <p className="mt-1 text-sm text-gray-900">—</p>
-                    </div>
-                    <div>
-                      <span className="text-xs font-medium text-gray-500">Manhole Positions</span>
-                      <p className="mt-1 text-sm text-gray-900">—</p>
+                      <span className="text-xs font-medium text-gray-500">Material Cost Variation</span>
+                      <p className="mt-1 text-sm text-gray-900">{request?.material_cost_variation || '—'}</p>
                     </div>
                     <div>
                       <span className="text-xs font-medium text-gray-500">Route Deviations</span>
+                      <p className="mt-1 text-sm text-gray-900">{request?.route_deviations || '—'}</p>
+                    </div>
+                    <div>
+                      <span className="text-xs font-medium text-gray-500">Estimated Downtime</span>
+                      <p className="mt-1 text-sm text-gray-900">{request?.estimated_downtime || '—'}</p>
+                    </div>
+                    <div className="col-span-2">
+                      <span className="text-xs font-medium text-gray-500">Proposed Change</span>
+                      <p className="mt-1 text-sm text-gray-900 whitespace-pre-wrap">{request?.change_description || '—'}</p>
+                    </div>
+                    <div className="col-span-2">
+                      <span className="text-xs font-medium text-gray-500">Manhole Positions</span>
                       <p className="mt-1 text-sm text-gray-900">—</p>
                     </div>
                   </div>
@@ -148,17 +156,17 @@ export default function ChangeRequestDrawer({ request, isOpen, onClose }: Change
                 <section className="space-y-4">
                   <h3 className="text-sm font-semibold text-gray-900">Business Impact & Justification</h3>
                   <div className="grid grid-cols-2 gap-4 rounded-lg border border-gray-200 bg-gray-50 p-4">
-                    <div>
-                      <span className="text-xs font-medium text-gray-500">Technical Reason</span>
-                      <p className="mt-1 text-sm text-gray-900">—</p>
+                    <div className="col-span-2">
+                      <span className="text-xs font-medium text-gray-500">Technical Engineering Reason / Justification</span>
+                      <p className="mt-1 text-sm text-gray-900 whitespace-pre-wrap">{request?.technical_reason || '—'}</p>
                     </div>
                     <div>
                       <span className="text-xs font-medium text-gray-500">Estimated Downtime</span>
-                      <p className="mt-1 text-sm text-gray-900">—</p>
+                      <p className="mt-1 text-sm text-gray-900">{request?.estimated_downtime || '—'}</p>
                     </div>
                     <div>
                       <span className="text-xs font-medium text-gray-500">Material Cost Variation</span>
-                      <p className="mt-1 text-sm text-gray-900">—</p>
+                      <p className="mt-1 text-sm text-gray-900">{request?.material_cost_variation || '—'}</p>
                     </div>
                     <div>
                       <span className="text-xs font-medium text-gray-500">Priority Level</span>
