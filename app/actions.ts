@@ -243,3 +243,34 @@ export async function updateUserProfile(department: string) {
   revalidatePath('/')
   return { success: true }
 }
+
+export async function createUserProfile(fullName: string, department: string, role: string = 'REQUESTER') {
+  const supabase = await createClient()
+
+  const { data: { user }, error: userError } = await supabase.auth.getUser()
+  if (userError || !user) {
+    return { error: userError?.message ?? 'Not authenticated' }
+  }
+
+  const { error } = await supabase
+    .from('profiles')
+    .upsert({
+      id: user.id,
+      email: user.email ?? '',
+      full_name: fullName,
+      department,
+      role,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      is_active: true,
+    }, {
+      onConflict: 'id',
+    })
+
+  if (error) {
+    return { error: error.message }
+  }
+
+  revalidatePath('/')
+  return { success: true }
+}

@@ -15,7 +15,7 @@ type StatusButtonsProps = {
   approverEmail?: string | null
 }
 
-export default function StatusButtons({ requestId, status, userProfile, onRejected }: StatusButtonsProps) {
+export default function StatusButtons({ requestId, status, userProfile, onRejected, approverEmail }: StatusButtonsProps) {
   const [loading, setLoading] = useState(false)
 
   // Hide buttons for final states
@@ -32,11 +32,15 @@ export default function StatusButtons({ requestId, status, userProfile, onReject
   }
 
   const targetDept = allowedDeptMap[status ?? '']
-  const isTargetApprover =
+  const isAuthorizedApprover =
     currentUserRole === 'APPROVER' &&
     !!currentUserDept &&
     !!targetDept &&
     currentUserDept === targetDept
+
+  const isAssignedApprover = approverEmail && userProfile?.email === approverEmail
+
+  const canTakeAction = isAuthorizedApprover || isAssignedApprover
 
   const handleStatusUpdate = async (action: 'APPROVE' | 'REJECT') => {
     setLoading(true)

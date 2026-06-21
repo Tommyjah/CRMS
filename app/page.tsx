@@ -10,12 +10,14 @@ import { getUserProfile } from '@/app/actions'
 export default function Dashboard() {
   const { data, loading, error, toast, updateStatus, calculateLagHours } = useChangeRequests()
   const [expandedId, setExpandedId] = useState<string | null>(null)
-  const [userProfile, setUserProfile] = useState<{ department: string | null; role: string | null } | null>(null)
+  const [userProfile, setUserProfile] = useState<{ department: string | null; role: string | null; email?: string | null } | null>(null)
 
   useEffect(() => {
-    getUserProfile().then(({ data }) => {
-      if (data) setUserProfile(data)
-    })
+    async function loadProfile() {
+      const { data: profileData } = await getUserProfile()
+      if (profileData) setUserProfile(profileData)
+    }
+    loadProfile()
   }, [])
 
   const handleStatusChange = async (id: string, newStatus: string | null) => {
@@ -51,7 +53,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50/50 dark:bg-zinc-950" suppressHydrationWarning={true}>
+    <div className="min-h-screen w-full bg-slate-50/50 dark:bg-zinc-950 text-slate-900 dark:text-zinc-50 transition-colors duration-200">
       <OnboardingModal />
       <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between gap-4">
