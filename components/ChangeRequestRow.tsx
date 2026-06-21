@@ -7,6 +7,7 @@ import type { ChangeRequest, RequestAuditLog } from '@/lib/supabase/client.ts'
 import type { RequestWithAudit } from '@/hooks/useChangeRequests'
 import { ROLE_ACCESS } from '@/hooks/useChangeRequests'
 import StatusButtons from '@/components/StatusButtons'
+import ChangeRequestDrawer from '@/components/ChangeRequestDrawer'
 
 import { getRequestActivities } from '@/app/actions'
 
@@ -157,6 +158,7 @@ export default function ChangeRequestRow({
   const [isLoading, setIsLoading] = useState(false)
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false)
   const [pdfError, setPdfError] = useState<string | null>(null)
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false)
 
   const access = ROLE_ACCESS[req.status ?? ''] ?? ROLE_ACCESS.DRAFT
   
@@ -250,7 +252,8 @@ export default function ChangeRequestRow({
   ]
 
   return (
-    <div className={`rounded-xl border bg-white shadow-sm transition hover:shadow-md ${stale ? 'border-red-300' : 'border-gray-200'}`} suppressHydrationWarning={true}>
+    <>
+      <div className={`rounded-xl border bg-white shadow-sm transition hover:shadow-md ${stale ? 'border-red-300' : 'border-gray-200'}`} suppressHydrationWarning={true}>
       <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
@@ -317,6 +320,13 @@ export default function ChangeRequestRow({
               </option>
             ))}
           </select>
+          <button
+            type="button"
+            onClick={() => setIsDrawerOpen(true)}
+            className="rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          >
+            🔍 Details
+          </button>
           <StatusButtons requestId={req.id} status={req.status} userProfile={userProfile} />
         </div>
       </div>
@@ -338,5 +348,8 @@ export default function ChangeRequestRow({
         )}
       </div>
     </div>
+
+    <ChangeRequestDrawer request={req} isOpen={isDrawerOpen} onClose={() => setIsDrawerOpen(false)} />
+    </>
   )
 }

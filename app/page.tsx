@@ -54,18 +54,20 @@ useEffect(() => {
     <div className="min-h-screen bg-gray-50" suppressHydrationWarning={true}>
       <OnboardingModal />
       <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between gap-4">
+<div className="flex items-center justify-between gap-4">
           <h1 className="text-2xl font-bold text-gray-900 sm:text-3xl">Project Approvals</h1>
           <div className="flex items-center gap-3">
             <span className="rounded-full bg-gray-200 px-3 py-1 text-xs font-medium text-gray-700">
               {data.length} {data.length === 1 ? 'request' : 'requests'}
             </span>
-            <Link
-              href="/create-request"
-              className="rounded-lg bg-blue-600 px-6 py-2 text-sm font-medium text-white hover:bg-blue-700"
-            >
-              + New Request
-            </Link>
+            {(userProfile?.role === 'INITIATOR' || userProfile?.role === 'REQUESTER') && (
+              <Link
+                href="/create-request"
+                className="rounded-lg bg-blue-600 px-6 py-2 text-sm font-medium text-white hover:bg-blue-700"
+              >
+                + New Request
+              </Link>
+            )}
           </div>
         </div>
 

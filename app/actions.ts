@@ -8,7 +8,19 @@ export type RequestStatus = 'PENDING_DEPT_1' | 'PENDING_DEPT_2' | 'PENDING_DEPT_
 
 export async function createChangeRequest(
   formData: FormData, 
-  activities: { serial_number: number; activity: string; unit: string; contract_qty: string; executed_qty: string; reason: string }[]
+  activities: { serial_number: number; activity: string; unit: string; contract_qty: string; executed_qty: string; reason: string }[],
+  extraFields?: {
+    site_coordinates?: string
+    route_impact?: string
+    duct_sizes?: string
+    material_cost_variation?: string
+    route_deviations?: string
+    estimated_downtime?: string
+    technical_reason?: string
+    fixed_network_approver?: string
+    wire_line_approver?: string
+    engineering_approver?: string
+  }
 ) {
   const supabase = await createClient()
 
@@ -19,13 +31,18 @@ export async function createChangeRequest(
 
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
-    .select('department')
+    .select('department, role')
     .eq('id', user.id)
     .single()
 
-  if (profileError) {
-    return { error: profileError.message }
+  // Step 1: Restrict Request Creation Permissions (Initiator Only)
+  if (profileError || !profile) {
+    return { error: profileError?.message ?? 'Profile not found' }
   }
+  if (profile.role !== 'INITIATOR' && profile.role !== 'REQUESTER') {
+    return { error: 'Access Denied: Only Initiators can create new requests.' }
+  }
+
   // 1. Build the payload object with explicit type guards
   const payload = {
     project_name: String(formData.get('project_name') ?? ''),
@@ -35,8 +52,19 @@ export async function createChangeRequest(
     change_description: String(formData.get('change_description') ?? ''),
     user_id: user.id,
     // Use the nullish coalescing operator (??) to guarantee a strict string
-    initiated_by: profile.department ?? 'Initiator', 
+    initiated_by: profile.department ?? 'Initiator',
     status: 'PENDING_DEPT_1',
+    // Step 3: Add extra technical and approver fields
+    site_coordinates: extraFields?.site_coordinates ?? null,
+    route_impact: extraFields?.route_impact ?? null,
+    duct_sizes: extraFields?.duct_sizes ?? null,
+    material_cost_variation: extraFields?.material_cost_variation ?? null,
+    route_deviations: extraFields?.route_deviations ?? null,
+    estimated_downtime: extraFields?.estimated_downtime ?? null,
+    technical_reason: extraFields?.technical_reason ?? null,
+    fixed_network_approver: extraFields?.fixed_network_approver ?? null,
+    wire_line_approver: extraFields?.wire_line_approver ?? null,
+    engineering_approver: extraFields?.engineering_approver ?? null,
   }
 
   // 2. Cast the payload 'as any' inside the insert function to satisfy the Supabase client

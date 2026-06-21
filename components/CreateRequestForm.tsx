@@ -14,6 +14,22 @@ type ActivityRow = {
   reason: string
 }
 
+type TechnicalSpec = {
+  site_coordinates: string
+  route_impact: string
+  duct_sizes: string
+  material_cost_variation: string
+  route_deviations: string
+  estimated_downtime: string
+  technical_reason: string
+}
+
+type ApproverAssign = {
+  fixed_network_approver: string
+  wire_line_approver: string
+  engineering_approver: string
+}
+
 export default function CreateRequestForm() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
@@ -29,6 +45,20 @@ export default function CreateRequestForm() {
       reason: '',
     },
   ])
+  const [technicalSpec, setTechnicalSpec] = useState<TechnicalSpec>({
+    site_coordinates: '',
+    route_impact: '',
+    duct_sizes: '',
+    material_cost_variation: '',
+    route_deviations: '',
+    estimated_downtime: '',
+    technical_reason: '',
+  })
+  const [approvers, setApprovers] = useState<ApproverAssign>({
+    fixed_network_approver: '',
+    wire_line_approver: '',
+    engineering_approver: '',
+  })
 
   const addActivityRow = () => {
     setActivities((prev) => [
@@ -76,7 +106,10 @@ export default function CreateRequestForm() {
         reason: row.reason,
       }))
 
-    const result = await createChangeRequest(formData, activityPayload)
+    const result = await createChangeRequest(formData, activityPayload, {
+      ...technicalSpec,
+      ...approvers,
+    })
 
     if (result?.error) {
       setError(result.error)
@@ -157,6 +190,128 @@ export default function CreateRequestForm() {
                   className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
                 />
               </label>
+
+              {/* Technical Infrastructure Specifications */}
+              <div className="sm:col-span-2">
+                <h2 className="text-lg font-semibold text-gray-900 mb-4">Technical Infrastructure Specifications</h2>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <label className="block">
+                    <span className="block text-sm font-medium text-gray-700">Site Coordinates</span>
+                    <input
+                      type="text"
+                      value={technicalSpec.site_coordinates}
+                      onChange={(e) => setTechnicalSpec(prev => ({ ...prev, site_coordinates: e.target.value }))}
+                      className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                      placeholder="Enter site coordinates"
+                    />
+                  </label>
+
+                  <label className="block">
+                    <span className="block text-sm font-medium text-gray-700">Route Impact</span>
+                    <input
+                      type="text"
+                      value={technicalSpec.route_impact}
+                      onChange={(e) => setTechnicalSpec(prev => ({ ...prev, route_impact: e.target.value }))}
+                      className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                      placeholder="Enter route impact details"
+                    />
+                  </label>
+
+                  <label className="block">
+                    <span className="block text-sm font-medium text-gray-700">Duct Sizes</span>
+                    <input
+                      type="text"
+                      value={technicalSpec.duct_sizes}
+                      onChange={(e) => setTechnicalSpec(prev => ({ ...prev, duct_sizes: e.target.value }))}
+                      className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                      placeholder="Enter duct sizes"
+                    />
+                  </label>
+
+                  <label className="block">
+                    <span className="block text-sm font-medium text-gray-700">Material Cost Variation</span>
+                    <input
+                      type="text"
+                      value={technicalSpec.material_cost_variation}
+                      onChange={(e) => setTechnicalSpec(prev => ({ ...prev, material_cost_variation: e.target.value }))}
+                      className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                      placeholder="Estimated cost variation"
+                    />
+                  </label>
+
+                  <label className="block">
+                    <span className="block text-sm font-medium text-gray-700">Route Deviations</span>
+                    <input
+                      type="text"
+                      value={technicalSpec.route_deviations}
+                      onChange={(e) => setTechnicalSpec(prev => ({ ...prev, route_deviations: e.target.value }))}
+                      className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                      placeholder="Enter route deviations"
+                    />
+                  </label>
+
+                  <label className="block">
+                    <span className="block text-sm font-medium text-gray-700">Estimated Downtime</span>
+                    <input
+                      type="text"
+                      value={technicalSpec.estimated_downtime}
+                      onChange={(e) => setTechnicalSpec(prev => ({ ...prev, estimated_downtime: e.target.value }))}
+                      className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                      placeholder="Enter estimated downtime"
+                    />
+                  </label>
+
+                  <label className="block sm:col-span-2">
+                    <span className="block text-sm font-medium text-gray-700">Technical Engineering Reason / Justification</span>
+                    <textarea
+                      value={technicalSpec.technical_reason}
+                      onChange={(e) => setTechnicalSpec(prev => ({ ...prev, technical_reason: e.target.value }))}
+                      rows={3}
+                      className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                      placeholder="Why is this change necessary?"
+                    />
+                  </label>
+                </div>
+              </div>
+
+              {/* Workflow Route Assignment */}
+              <div className="sm:col-span-2">
+                <h2 className="text-lg font-semibold text-gray-900 mb-4">Workflow Route Assignment</h2>
+                <div className="grid gap-4 sm:grid-cols-3">
+                  <label className="block">
+                    <span className="block text-sm font-medium text-gray-700">Fixed Network Approver</span>
+                    <input
+                      type="text"
+                      value={approvers.fixed_network_approver}
+                      onChange={(e) => setApprovers(prev => ({ ...prev, fixed_network_approver: e.target.value }))}
+                      className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                      placeholder="Enter approver's name or email"
+                    />
+                  </label>
+
+                  <label className="block">
+                    <span className="block text-sm font-medium text-gray-700">Wire Line Planning Approver</span>
+                    <input
+                      type="text"
+                      value={approvers.wire_line_approver}
+                      onChange={(e) => setApprovers(prev => ({ ...prev, wire_line_approver: e.target.value }))}
+                      className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                      placeholder="Enter approver's name or email"
+                    />
+                  </label>
+
+                  <label className="block">
+                    <span className="block text-sm font-medium text-gray-700">Engineering Approver</span>
+                    <input
+                      type="text"
+                      value={approvers.engineering_approver}
+                      onChange={(e) => setApprovers(prev => ({ ...prev, engineering_approver: e.target.value }))}
+                      className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                      placeholder="Enter approver's name or email"
+                    />
+                  </label>
+                </div>
+              </div>
             </div>
 
             <div>

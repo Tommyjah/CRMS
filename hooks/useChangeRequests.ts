@@ -34,6 +34,8 @@ export const ROLE_ACCESS: Record<
   REJECTED: { department: null, canApprove: false, locked: true, label: 'Rejected' },
 }
 
+export const DEPARTMENTS = ['Initiator', 'Fixed Network', 'Wire Line Planning', 'Engineering']
+
 function calculateLagHours(request: RequestWithAudit): number {
   const baseTime = request.created_at ? new Date(request.created_at).getTime() : Date.now()
 
