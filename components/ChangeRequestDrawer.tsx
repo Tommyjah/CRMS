@@ -30,32 +30,32 @@ export default function ChangeRequestDrawer({ request, isOpen, onClose }: Change
 
   if (!request) return null
 
-  return (
+return (
     <div
       className={`fixed inset-0 z-50 transition-opacity duration-300 ${
         isAnimating ? 'opacity-100' : 'opacity-0 pointer-events-none'
       }`}
       aria-hidden="true"
     >
-      <div className="absolute inset-0 bg-gray-500 bg-opacity-75" onClick={onClose} />
+      <div className="absolute inset-0 bg-slate-900/50 dark:bg-zinc-900/70" onClick={onClose} />
       
       <div
         className={`absolute bottom-0 right-0 top-0 w-full max-w-2xl transform transition-transform duration-300 ${
           isAnimating ? 'translate-x-0' : 'translate-x-full'
         }`}
       >
-        <div className="flex h-full flex-col bg-white shadow-xl">
+        <div className="flex h-full flex-col bg-white dark:bg-zinc-900 shadow-xl">
           <div className="flex min-h-0 flex-1 flex-col">
-            <div className="flex items-center justify-between bg-gray-50 px-4 py-4 sm:px-6">
+            <div className="flex items-center justify-between border-b border-slate-200/80 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-800/30 px-4 py-4 sm:px-6">
               <div>
-                <h2 className="text-lg font-medium text-gray-900">Request Details</h2>
-                <p className="mt-1 text-sm text-gray-500">
+                <h2 className="text-lg font-semibold text-slate-900 dark:text-zinc-100">Request Details</h2>
+                <p className="mt-1 text-sm text-slate-500 dark:text-zinc-400">
                   #{request?.project_number || request?.id?.slice(0, 8)}
                 </p>
               </div>
               <button
                 type="button"
-                className="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                className="rounded-md bg-white dark:bg-zinc-800 text-slate-400 dark:text-zinc-400 hover:text-slate-600 dark:hover:text-zinc-200 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 transition-colors"
                 onClick={handleClose}
               >
                 <span className="sr-only">Close panel</span>
@@ -68,27 +68,28 @@ export default function ChangeRequestDrawer({ request, isOpen, onClose }: Change
             <div className="flex-1 overflow-y-auto p-4 sm:p-6">
               <div className="space-y-6">
                 <section className="space-y-4">
-                  <h3 className="text-sm font-semibold text-gray-900">Header Information</h3>
-                  <div className="grid grid-cols-2 gap-4 rounded-lg border border-gray-200 bg-gray-50 p-4">
+                  <h3 className="text-sm font-semibold text-slate-900 dark:text-zinc-100">Header Information</h3>
+                  <div className="grid grid-cols-2 gap-4 rounded-lg border border-slate-200/80 dark:border-zinc-800/80 bg-slate-50/30 dark:bg-zinc-800/20 p-4">
                     <div>
-                      <span className="text-xs font-medium text-gray-500">Title</span>
-                      <p className="mt-1 text-sm font-medium text-gray-900">{request?.project_name || '—'}</p>
+                      <span className="text-xs font-medium text-slate-500 dark:text-zinc-400">Title</span>
+                      <p className="mt-1 text-sm font-medium text-slate-900 dark:text-zinc-100">{request?.project_name || '—'}</p>
                     </div>
                     <div>
-                      <span className="text-xs font-medium text-gray-500">Created</span>
-                      <p className="mt-1 text-sm text-gray-900">{formatDate(request?.created_at)}</p>
+                      <span className="text-xs font-medium text-slate-500 dark:text-zinc-400">Created</span>
+                      <p className="mt-1 text-sm text-slate-700 dark:text-zinc-300">{formatDate(request?.created_at)}</p>
                     </div>
                     <div>
-                      <span className="text-xs font-medium text-gray-500">Initiator</span>
-                      <p className="mt-1 text-sm text-gray-900">{request?.initiated_by || request?.initiator_name || '—'}</p>
+                      <span className="text-xs font-medium text-slate-500 dark:text-zinc-400">Initiator</span>
+                      <p className="mt-1 text-sm text-slate-700 dark:text-zinc-300">{request?.initiated_by || request?.initiator_name || '—'}</p>
                     </div>
                     <div>
-                      <span className="text-xs font-medium text-gray-500">Status</span>
+                      <span className="text-xs font-medium text-slate-500 dark:text-zinc-400">Status</span>
                       <p className="mt-1">
                         <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                          request?.status === 'APPROVED' ? 'bg-green-100 text-green-800' :
-                          request?.status === 'REJECTED' ? 'bg-red-100 text-red-800' :
-                          'bg-blue-100 text-blue-800'
+                          request?.status === 'APPROVED' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-400' :
+                          request?.status === 'REJECTED' ? 'bg-rose-100 text-rose-800 dark:bg-rose-950/30 dark:text-rose-400' :
+                          request?.status?.startsWith('PENDING') ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/30 dark:text-amber-400' :
+                          'bg-slate-100 text-slate-800 dark:bg-zinc-800/50 dark:text-zinc-300'
                         }`}>
                           {request?.status?.replace(/_/g, ' ') || '—'}
                         </span>
@@ -98,111 +99,95 @@ export default function ChangeRequestDrawer({ request, isOpen, onClose }: Change
                 </section>
 
                 <section className="space-y-4">
-                  <h3 className="text-sm font-semibold text-gray-900">Location & Route</h3>
-                  <div className="grid grid-cols-2 gap-4 rounded-lg border border-gray-200 bg-gray-50 p-4">
-                    <div className="col-span-2">
-                      <span className="text-xs font-medium text-gray-500">Target Segments</span>
-                      <p className="mt-1 text-sm text-gray-900">—</p>
+                  <h3 className="text-sm font-semibold text-slate-900 dark:text-zinc-100">Location & Route Details</h3>
+                  <div className="grid grid-cols-3 gap-4 rounded-lg border border-slate-200/80 dark:border-zinc-800/80 bg-slate-50/30 dark:bg-zinc-800/20 p-4">
+                    <div>
+                      <span className="text-xs font-medium text-slate-500 dark:text-zinc-400">Target Segments</span>
+                      <p className={`mt-1 text-sm text-slate-700 dark:text-zinc-300 ${!request?.target_segments ? 'italic text-slate-400 dark:text-zinc-500' : ''}`}>{request?.target_segments || 'Not specified'}</p>
                     </div>
                     <div>
-                      <span className="text-xs font-medium text-gray-500">Route Impact</span>
-                      <p className="mt-1 text-sm text-gray-900">—</p>
+                      <span className="text-xs font-medium text-slate-500 dark:text-zinc-400">Site Coordinates</span>
+                      <p className={`mt-1 text-sm text-slate-700 dark:text-zinc-300 ${!request?.site_coordinates ? 'italic text-slate-400 dark:text-zinc-500' : ''}`}>{request?.site_coordinates || 'Not specified'}</p>
                     </div>
                     <div>
-                      <span className="text-xs font-medium text-gray-500">Site Coordinates</span>
-                      <p className="mt-1 text-sm text-gray-900">—</p>
-                    </div>
-                  </div>
-                </section>
-
-                <section className="space-y-4">
-                  <h3 className="text-sm font-semibold text-gray-900">Location & Route Details</h3>
-                  <div className="grid grid-cols-2 gap-4 rounded-lg border border-gray-200 bg-gray-50 p-4">
-                    <div>
-                      <span className="text-xs font-medium text-gray-500">Target Segments</span>
-                      <p className="mt-1 text-sm text-gray-900">{request?.target_segments || '—'}</p>
-                    </div>
-                    <div>
-                      <span className="text-xs font-medium text-gray-500">Site Coordinates</span>
-                      <p className="mt-1 text-sm text-gray-900">{request?.site_coordinates || '—'}</p>
-                    </div>
-                    <div>
-                      <span className="text-xs font-medium text-gray-500">Route Impact</span>
-                      <p className="mt-1 text-sm text-gray-900">{request?.route_impact || '—'}</p>
+                      <span className="text-xs font-medium text-slate-500 dark:text-zinc-400">Route Impact</span>
+                      <p className={`mt-1 text-sm text-slate-700 dark:text-zinc-300 ${!request?.route_impact ? 'italic text-slate-400 dark:text-zinc-500' : ''}`}>{request?.route_impact || 'Not specified'}</p>
                     </div>
                   </div>
                 </section>
 
                 <section className="space-y-4">
-                  <h3 className="text-sm font-semibold text-gray-900">Technical Specifications</h3>
-                  <div className="grid grid-cols-2 gap-4 rounded-lg border border-gray-200 bg-gray-50 p-4">
+                  <h3 className="text-sm font-semibold text-slate-900 dark:text-zinc-100">Technical Specifications</h3>
+                  <div className="grid grid-cols-2 gap-4 rounded-lg border border-slate-200/80 dark:border-zinc-800/80 bg-slate-50/30 dark:bg-zinc-800/20 p-4">
                     <div>
-                      <span className="text-xs font-medium text-gray-500">Duct Sizes</span>
-                      <p className="mt-1 text-sm text-gray-900">{request?.duct_sizes || '—'}</p>
+                      <span className="text-xs font-medium text-slate-500 dark:text-zinc-400">Duct Sizes</span>
+                      <p className={`mt-1 text-sm text-slate-700 dark:text-zinc-300 ${!request?.duct_sizes ? 'italic text-slate-400 dark:text-zinc-500' : ''}`}>{request?.duct_sizes || 'Not specified'}</p>
                     </div>
                     <div>
-                      <span className="text-xs font-medium text-gray-500">Material Cost Variation</span>
-                      <p className="mt-1 text-sm text-gray-900">{request?.material_cost_variation || '—'}</p>
+                      <span className="text-xs font-medium text-slate-500 dark:text-zinc-400">Material Cost Variation</span>
+                      <p className={`mt-1 text-sm text-slate-700 dark:text-zinc-300 ${!request?.material_cost_variation ? 'italic text-slate-400 dark:text-zinc-500' : ''}`}>{request?.material_cost_variation || 'Not specified'}</p>
                     </div>
                     <div>
-                      <span className="text-xs font-medium text-gray-500">Route Deviations</span>
-                      <p className="mt-1 text-sm text-gray-900">{request?.route_deviations || '—'}</p>
+                      <span className="text-xs font-medium text-slate-500 dark:text-zinc-400">Route Deviations</span>
+                      <p className={`mt-1 text-sm text-slate-700 dark:text-zinc-300 ${!request?.route_deviations ? 'italic text-slate-400 dark:text-zinc-500' : ''}`}>{request?.route_deviations || 'Not specified'}</p>
                     </div>
                     <div>
-                      <span className="text-xs font-medium text-gray-500">Estimated Downtime</span>
-                      <p className="mt-1 text-sm text-gray-900">{request?.estimated_downtime || '—'}</p>
+                      <span className="text-xs font-medium text-slate-500 dark:text-zinc-400">Estimated Downtime</span>
+                      <p className={`mt-1 text-sm text-slate-700 dark:text-zinc-300 ${!request?.estimated_downtime ? 'italic text-slate-400 dark:text-zinc-500' : ''}`}>{request?.estimated_downtime || 'Not specified'}</p>
                     </div>
                     <div className="col-span-2">
-                      <span className="text-xs font-medium text-gray-500">Proposed Change</span>
-                      <p className="mt-1 text-sm text-gray-900 whitespace-pre-wrap">{request?.change_description || '—'}</p>
+                      <span className="text-xs font-medium text-slate-500 dark:text-zinc-400">Proposed Change</span>
+                      <p className="mt-1 text-sm text-slate-700 dark:text-zinc-300 whitespace-pre-wrap">{request?.change_description || '—'}</p>
                     </div>
                   </div>
                 </section>
 
                 <section className="space-y-4">
-                  <h3 className="text-sm font-semibold text-gray-900">Business Impact & Justification</h3>
-                  <div className="grid grid-cols-1 gap-4 rounded-lg border border-gray-200 bg-gray-50 p-4">
+                  <h3 className="text-sm font-semibold text-slate-900 dark:text-zinc-100">Business Impact & Justification</h3>
+                  <div className="grid grid-cols-1 gap-4 rounded-lg border border-slate-200/80 dark:border-zinc-800/80 bg-slate-50/30 dark:bg-zinc-800/20 p-4">
                     <div>
-                      <span className="text-xs font-medium text-gray-500">Technical Engineering Reason / Justification</span>
-                      <p className="mt-1 text-sm text-gray-900 whitespace-pre-wrap">{request?.technical_reason || '—'}</p>
+                      <span className="text-xs font-medium text-slate-500 dark:text-zinc-400">Technical Engineering Reason / Justification</span>
+                      <div className="mt-1 rounded-r-lg border-l-2 border-teal-500 bg-slate-50 dark:bg-zinc-800/40 p-3">
+                        <p className={`text-sm text-slate-700 dark:text-zinc-300 whitespace-pre-wrap ${!request?.technical_reason ? 'italic text-slate-400 dark:text-zinc-500' : ''}`}>{request?.technical_reason || 'Not specified'}</p>
+                      </div>
                     </div>
                     <div>
-                      <span className="text-xs font-medium text-gray-500">Priority Level</span>
-                      <p className="mt-1 text-sm text-gray-900">{request?.priority_level || '—'}</p>
+                      <span className="text-xs font-medium text-slate-500 dark:text-zinc-400">Priority Level</span>
+                      <p className="mt-1 text-sm text-slate-700 dark:text-zinc-300">{request?.priority_level || '—'}</p>
                     </div>
                   </div>
                 </section>
 
                 <section className="space-y-4">
-                  <h3 className="text-sm font-semibold text-gray-900">Approval Progress Tracker</h3>
-                  <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
-                    <ol className="relative ml-4 space-y-6 border-l border-gray-300">
+                  <h3 className="text-sm font-semibold text-slate-900 dark:text-zinc-100">Approval Progress Tracker</h3>
+                  <div className="rounded-lg border border-slate-200/80 dark:border-zinc-800/80 bg-slate-50/30 dark:bg-zinc-800/20 p-4">
+                    <ol className="relative ml-4 space-y-6 border-l border-slate-300 dark:border-zinc-700">
                       {(['DRAFT', 'PENDING_DEPT_1', 'PENDING_DEPT_2', 'PENDING_DEPT_3', 'APPROVED'] as const).map((stage, idx) => {
                         const isActive = request?.status === stage
                         const isComplete = stage === 'DRAFT' || (request?.status === 'APPROVED' && stage === 'APPROVED') || (request?.status !== 'APPROVED' && stage !== request?.status && stage !== 'APPROVED')
                         return (
                           <li key={stage} className="relative">
                             <div className={`absolute -left-5 flex h-8 w-8 items-center justify-center rounded-full border-2 ${
-                              isActive ? 'border-blue-600 bg-blue-600' : isComplete ? 'border-green-600 bg-green-600' : 'border-gray-300 bg-white'
+                              isActive ? 'border-teal-600 bg-teal-600 ring-4 ring-teal-500/20 animate-pulse' : isComplete ? 'border-emerald-600 bg-emerald-600' : 'border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-900'
                             }`}>
-                              <span className={`text-xs font-medium ${isActive || isComplete ? 'text-white' : 'text-gray-500'}`}>
+                              <span className={`text-xs font-medium ${isActive || isComplete ? 'text-white' : 'text-slate-500 dark:text-zinc-400'}`}>
                                 {idx + 1}
                               </span>
                             </div>
-<div className="ml-6">
-                               <p className={`text-sm font-medium ${isActive ? 'text-blue-900' : isComplete ? 'text-green-900' : 'text-gray-500'}`}>
-                                 {stage === 'DRAFT' ? 'Initiator' : stage === 'PENDING_DEPT_1' ? 'Fixed Network Review' : stage === 'PENDING_DEPT_2' ? 'Wire Line Planning Review' : stage === 'PENDING_DEPT_3' ? 'Engineering Review' : 'Approved'}
-                               </p>
-                               {stage === 'PENDING_DEPT_1' && (
-                                 <p className="text-xs italic text-gray-500">Assigned: {request?.fixed_network_approver || 'Unassigned'}</p>
-                               )}
-                               {stage === 'PENDING_DEPT_2' && (
-                                 <p className="text-xs italic text-gray-500">Assigned: {request?.wire_line_approver || 'Unassigned'}</p>
-                               )}
-                               {stage === 'PENDING_DEPT_3' && (
-                                 <p className="text-xs italic text-gray-500">Assigned: {request?.engineering_approver || 'Unassigned'}</p>
-                               )}
-                             </div>
+                            <div className="ml-6">
+                              <p className={`text-sm font-medium ${isActive ? 'text-teal-900 dark:text-teal-300' : isComplete ? 'text-emerald-900 dark:text-emerald-300' : 'text-slate-500 dark:text-zinc-400'}`}>
+                                {stage === 'DRAFT' ? 'Initiator' : stage === 'PENDING_DEPT_1' ? 'Fixed Network Review' : stage === 'PENDING_DEPT_2' ? 'Wire Line Planning Review' : stage === 'PENDING_DEPT_3' ? 'Engineering Review' : 'Approved'}
+                              </p>
+                              {stage === 'PENDING_DEPT_1' && (
+                                <p className="text-xs font-mono text-teal-600 dark:text-teal-400 mt-0.5">{request?.fixed_network_approver || 'Unassigned'}</p>
+                              )}
+                              {stage === 'PENDING_DEPT_2' && (
+                                <p className="text-xs font-mono text-teal-600 dark:text-teal-400 mt-0.5">{request?.wire_line_approver || 'Unassigned'}</p>
+                              )}
+                              {stage === 'PENDING_DEPT_3' && (
+                                <p className="text-xs font-mono text-teal-600 dark:text-teal-400 mt-0.5">{request?.engineering_approver || 'Unassigned'}</p>
+                              )}
+                            </div>
                           </li>
                         )
                       })}
@@ -212,10 +197,10 @@ export default function ChangeRequestDrawer({ request, isOpen, onClose }: Change
               </div>
             </div>
 
-            <div className="flex flex-shrink-0 justify-end border-t border-gray-200 px-4 py-4 sm:px-6">
+            <div className="flex flex-shrink-0 justify-end border-t border-slate-200/80 dark:border-zinc-800 px-4 py-4 sm:px-6">
               <button
                 type="button"
-                className="rounded-lg bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm ring-1 ring-gray-300 hover:bg-gray-50"
+                className="rounded-lg bg-white dark:bg-zinc-800 px-3 py-2 text-sm font-medium text-slate-700 dark:text-zinc-300 shadow-sm ring-1 ring-slate-300 dark:ring-zinc-700 hover:bg-slate-50 dark:hover:bg-zinc-800/50 transition-colors"
                 onClick={handleClose}
               >
                 Close

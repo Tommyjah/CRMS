@@ -30,22 +30,35 @@ type RequestActivityForPdf = {
 
 function StatusBadge({ status }: { status: string | null }) {
   const access = ROLE_ACCESS[status ?? ''] ?? ROLE_ACCESS.DRAFT
-  const base = 'inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ring-1 ring-inset'
   const styles: Record<string, string> = {
-    DRAFT: `${base} bg-gray-50 text-gray-800 ring-gray-600/30`,
-    PENDING_DEPT_1: `${base} bg-yellow-50 text-yellow-800 ring-yellow-600/30`,
-    PENDING_DEPT_2: `${base} bg-yellow-50 text-yellow-800 ring-yellow-600/30`,
-    PENDING_DEPT_3: `${base} bg-yellow-50 text-yellow-800 ring-yellow-600/30`,
-    APPROVED: `${base} bg-green-50 text-green-800 ring-green-600/30`,
-    REJECTED: `${base} bg-red-50 text-red-800 ring-red-600/30`,
+    DRAFT: 'bg-slate-50 text-slate-700 border border-slate-200 dark:bg-zinc-800/50 dark:text-zinc-300 dark:border-zinc-700',
+    PENDING_DEPT_1: 'bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/20 dark:text-amber-400 dark:border-amber-800/50',
+    PENDING_DEPT_2: 'bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/20 dark:text-amber-400 dark:border-amber-800/50',
+    PENDING_DEPT_3: 'bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/20 dark:text-amber-400 dark:border-amber-800/50',
+    APPROVED: 'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-800/50',
+    REJECTED: 'bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/20 dark:text-rose-400 dark:border-rose-800/50',
   }
-  return <span className={styles[status ?? ''] ?? `${base} bg-gray-50 text-gray-800 ring-gray-600/30`}>{access?.label || 'UNKNOWN'}</span>
+  const dotColors: Record<string, string> = {
+    DRAFT: 'bg-slate-400 dark:bg-zinc-500',
+    PENDING_DEPT_1: 'bg-amber-400 dark:bg-amber-400',
+    PENDING_DEPT_2: 'bg-amber-400 dark:bg-amber-400',
+    PENDING_DEPT_3: 'bg-amber-400 dark:bg-amber-400',
+    APPROVED: 'bg-emerald-400 dark:bg-emerald-400',
+    REJECTED: 'bg-rose-400 dark:bg-rose-400',
+  }
+  return (
+    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${styles[status ?? ''] ?? 'bg-slate-50 text-slate-700 border border-slate-200 dark:bg-zinc-800/50 dark:text-zinc-300 dark:border-zinc-700'}`}>
+      <span className={`h-1.5 w-1.5 rounded-full ${dotColors[status ?? ''] ?? 'bg-slate-400 dark:bg-zinc-500'}`} />
+      {access?.label || 'UNKNOWN'}
+    </span>
+  )
 }
 
 function LagBadge({ hours }: { hours: number }) {
   if (hours <= 48) return null
   return (
-    <span className="inline-flex items-center rounded-full bg-red-50 px-2.5 py-0.5 text-xs font-medium text-red-800 ring-1 ring-inset ring-red-600/30">
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-50 px-2.5 py-0.5 text-xs font-medium text-rose-700 border border-rose-200 dark:bg-rose-950/20 dark:text-rose-400 dark:border-rose-800/50">
+      <span className="h-1.5 w-1.5 rounded-full bg-rose-400" />
       Lagging · {Math.round(hours)}h
     </span>
   )
@@ -73,24 +86,24 @@ function DepartmentTimeline({ status, auditLogs }: { status: string | null; audi
             <span
               className={
                 isCurrent
-                  ? 'h-3 w-3 rounded-full border-2 border-blue-600 bg-blue-600'
+                  ? 'h-3 w-3 rounded-full border-2 border-teal-600 bg-teal-600'
                   : isComplete
-                    ? 'h-3 w-3 rounded-full border-2 border-green-600 bg-green-600'
-                    : 'h-3 w-3 rounded-full border-2 border-gray-300 bg-white'
+                    ? 'h-3 w-3 rounded-full border-2 border-emerald-600 bg-emerald-600'
+                    : 'h-3 w-3 rounded-full border-2 border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-900'
               }
             />
             <span
               className={
                 isCurrent
-                  ? 'text-sm font-semibold text-gray-900'
+                  ? 'text-sm font-semibold text-teal-900 dark:text-teal-300'
                   : isComplete
-                    ? 'text-sm font-medium text-green-800'
-                    : 'text-sm text-gray-500'
+                    ? 'text-sm font-medium text-emerald-800 dark:text-emerald-300'
+                    : 'text-sm text-slate-500 dark:text-zinc-400'
               }
             >
               {stageLabels[step] || step}
             </span>
-            {isCurrent && <span className="text-xs text-gray-500">(current)</span>}
+            {isCurrent && <span className="text-xs text-slate-500 dark:text-zinc-400">(current)</span>}
           </li>
         )
       })}
@@ -100,31 +113,31 @@ function DepartmentTimeline({ status, auditLogs }: { status: string | null; audi
 
 function AuditTimeline({ logs }: { logs: RequestAuditLog[] | undefined }) {
   if (!logs?.length) {
-    return <p className="text-sm text-gray-500 mt-2">No audit history available.</p>
+    return <p className="text-sm text-slate-500 dark:text-zinc-400 mt-2">No audit history available.</p>
   }
 
   return (
-    <ol className="relative mt-3 space-y-3 border-l border-gray-200 pl-4">
+    <ol className="relative mt-3 space-y-3 border-l border-slate-300/50 dark:border-zinc-700/50 pl-4">
       {logs
         .slice()
         .sort((a, b) => new Date(b.timestamp ?? 0).getTime() - new Date(a.timestamp ?? 0).getTime())
         .map((log) => (
           <li key={log.id} className="relative">
-            <div className="absolute -left-[21px] mt-1.5 h-3 w-3 rounded-full border-2 border-white bg-gray-300 shadow-sm" />
-            <div className="rounded-lg border border-gray-100 bg-gray-50 p-3 shadow-sm">
-              <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500">
+            <div className="absolute -left-[21px] mt-1.5 h-3 w-3 rounded-full border-2 border-white bg-slate-400 dark:bg-zinc-500 shadow-sm" />
+            <div className="rounded-lg border border-slate-200/80 dark:border-zinc-800/80 bg-slate-50/30 dark:bg-zinc-800/20 p-3 shadow-sm">
+              <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-zinc-400">
                 <span className="font-medium">{new Date(log.timestamp ?? '').toLocaleString()}</span>
-                <span className="rounded bg-gray-200 px-1.5 py-0.5 font-mono">{log.action}</span>
+                <span className="rounded bg-slate-200/50 dark:bg-zinc-700/50 px-1.5 py-0.5 font-mono">{log.action}</span>
                 <span>by {log.changed_by}</span>
               </div>
               {(log.previous_status || log.new_status) && (
-                <div className="mt-1 text-xs text-gray-600">
-                  <span className="rounded bg-gray-200 px-1.5 py-0.5 font-mono">{log.previous_status ?? 'null'}</span>
+                <div className="mt-1 text-xs text-slate-600 dark:text-zinc-400">
+                  <span className="rounded bg-slate-200/50 dark:bg-zinc-700/50 px-1.5 py-0.5 font-mono">{log.previous_status ?? 'null'}</span>
                   <span className="mx-1">→</span>
-                  <span className="rounded bg-gray-200 px-1.5 py-0.5 font-mono">{log.new_status ?? 'null'}</span>
+                  <span className="rounded bg-slate-200/50 dark:bg-zinc-700/50 px-1.5 py-0.5 font-mono">{log.new_status ?? 'null'}</span>
                 </div>
               )}
-              {log.comment && <p className="mt-1 text-xs text-gray-600">{log.comment}</p>}
+              {log.comment && <p className="mt-1 text-xs text-slate-600 dark:text-zinc-400">{log.comment}</p>}
             </div>
           </li>
         ))}
@@ -253,49 +266,49 @@ export default function ChangeRequestRow({
 
   return (
     <>
-      <div className={`rounded-xl border bg-white shadow-sm transition hover:shadow-md ${stale ? 'border-red-300' : 'border-gray-200'}`} suppressHydrationWarning={true}>
-      <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <h2 className="truncate text-lg font-bold text-gray-900">{req.project_name}</h2>
-            <StatusBadge status={req.status} />
-            <LagBadge hours={lagHours} />
+      <div className={`rounded-xl border bg-white shadow-sm transition-all duration-200 hover:shadow-md hover:border-teal-500/30 dark:bg-zinc-900 dark:border-zinc-800/80 ${stale ? 'border-rose-300' : 'border-slate-200/80'}`} suppressHydrationWarning={true}>
+<div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="truncate text-lg font-bold text-slate-900 dark:text-zinc-100">{req.project_name}</h2>
+              <StatusBadge status={req.status} />
+              <LagBadge hours={lagHours} />
+            </div>
+            <div className="mt-3 grid gap-2 text-sm text-slate-600 dark:text-zinc-300 sm:grid-cols-2">
+              <div>
+                <span className="font-medium text-slate-500 dark:text-zinc-400">Project Number:</span>{' '}
+                {projectNumber}
+              </div>
+              <div>
+                <span className="font-medium text-slate-500 dark:text-zinc-400">Initiated By:</span>{' '}
+                {initiator ?? '—'}
+              </div>
+              <div>
+                <span className="font-medium text-slate-500 dark:text-zinc-400">Priority Level:</span>{' '}
+                {priority}
+              </div>
+              <div>
+                <span className="font-medium text-slate-500 dark:text-zinc-400">Current holder:</span>{' '}
+                {access.department || '—'}
+              </div>
+            </div>
+            {description && (
+              <div className="mt-3 rounded-lg bg-slate-50/50 dark:bg-zinc-800/30 p-3">
+                <p className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-zinc-400">
+                  Change Description
+                </p>
+                <p className="mt-1 text-sm text-slate-700 dark:text-zinc-200">{description}</p>
+              </div>
+            )}
+            <time className="mt-2 block text-xs text-slate-500 dark:text-zinc-500">Created {formatDate(req.created_at)}</time>
           </div>
-          <div className="mt-3 grid gap-2 text-sm text-gray-700 sm:grid-cols-2">
-            <div>
-              <span className="font-medium text-gray-500">Project Number:</span>{' '}
-              {projectNumber}
-            </div>
-            <div>
-              <span className="font-medium text-gray-500">Initiated By:</span>{' '}
-              {initiator ?? '—'}
-            </div>
-            <div>
-              <span className="font-medium text-gray-500">Priority Level:</span>{' '}
-              {priority}
-            </div>
-            <div>
-              <span className="font-medium text-gray-500">Current holder:</span>{' '}
-              {access.department || '—'}
-            </div>
-          </div>
-          {description && (
-            <div className="mt-3 rounded-lg bg-gray-50 p-3">
-              <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
-                Change Description
-              </p>
-              <p className="mt-1 text-sm text-gray-700">{description}</p>
-            </div>
-          )}
-          <time className="mt-2 block text-xs text-gray-400">Created {formatDate(req.created_at)}</time>
-        </div>
 
         <div className="flex shrink-0 flex-wrap items-center gap-2">
           <button
             type="button"
             onClick={() => toggleAuditLog(req.id)}
             disabled={isLoading}
-            className="rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+            className="rounded-lg border border-slate-300 dark:border-zinc-700 px-3 py-2 text-sm font-medium text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800 disabled:opacity-50 transition-colors"
           >
             {isLoading ? 'Loading...' : expandedId === req.id ? 'Hide audit log' : 'View audit log'}
           </button>
@@ -303,7 +316,7 @@ export default function ChangeRequestRow({
             type="button"
             onClick={handleDownloadPdf}
             disabled={isGeneratingPdf}
-            className="rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+            className="rounded-lg border border-slate-300 dark:border-zinc-700 px-3 py-2 text-sm font-medium text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800 disabled:opacity-50 transition-colors"
           >
             {isGeneratingPdf ? 'Generating...' : 'Download PDF'}
           </button>
@@ -311,7 +324,7 @@ export default function ChangeRequestRow({
             value={req.status ?? ''}
             onChange={(e) => onStatusChange(req.id, e.target.value || null)}
             disabled={access.locked}
-            className="rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-lg border border-slate-300 dark:border-zinc-700 px-3 py-2 text-sm font-medium text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60 transition-colors"
           >
             <option value="" disabled>Set status</option>
             {statusOptions.map((opt) => (
@@ -323,7 +336,7 @@ export default function ChangeRequestRow({
           <button
             type="button"
             onClick={() => setIsDrawerOpen(true)}
-            className="rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            className="rounded-lg border border-slate-300 dark:border-zinc-700 px-3 py-2 text-sm font-medium text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors"
           >
             🔍 Details
           </button>
@@ -332,17 +345,17 @@ export default function ChangeRequestRow({
       </div>
 
       {pdfError && (
-        <div className="mx-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+        <div className="mx-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800 dark:bg-rose-950/20 dark:text-rose-400">
           {pdfError}
         </div>
       )}
 
-      <div className="border-t border-gray-100 px-4 pb-4">
-        <h3 className="mb-2 text-sm font-semibold text-gray-900">Approval Timeline</h3>
+      <div className="border-t border-slate-200/50 dark:border-zinc-800 px-4 pb-4">
+        <h3 className="mb-2 text-sm font-semibold text-slate-900 dark:text-zinc-100">Approval Timeline</h3>
         <DepartmentTimeline status={req.status} auditLogs={auditLogs ?? undefined} />
         {expandedId === req.id && (
           <div className="mt-4">
-            <h3 className="mb-2 text-sm font-semibold text-gray-900">Audit History</h3>
+            <h3 className="mb-2 text-sm font-semibold text-slate-900 dark:text-zinc-100">Audit History</h3>
             <AuditTimeline logs={auditLogs ?? undefined} />
           </div>
         )}

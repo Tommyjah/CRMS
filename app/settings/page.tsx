@@ -64,74 +64,78 @@ export default function SettingsPage() {
 
   if (loading) {
     return (
-      <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 lg:px-8">
-        <div className="animate-pulse space-y-4">
-          <div className="h-8 w-32 rounded bg-gray-200 dark:bg-gray-700"></div>
-          <div className="h-64 rounded bg-gray-200 dark:bg-gray-700"></div>
+      <div className="min-h-screen bg-slate-50/50 dark:bg-zinc-950">
+        <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 lg:px-8">
+          <div className="animate-pulse space-y-4">
+            <div className="h-8 w-32 rounded bg-slate-200 dark:bg-zinc-700"></div>
+            <div className="h-64 rounded bg-slate-200 dark:bg-zinc-700"></div>
+          </div>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 lg:px-8">
-      <div className="mb-6 flex items-center justify-between">
-        <button
-          type="button"
-          onClick={() => router.push('/')}
-          className="text-sm text-blue-600 hover:underline dark:text-blue-400"
-        >
-          ← Back to Dashboard
-        </button>
-      </div>
-
-      <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 sm:text-3xl">Settings</h1>
-
-      {error && (
-        <div className="mt-4 rounded-lg bg-red-50 p-4 text-sm text-red-600 dark:bg-red-900/20 dark:text-red-400">
-          {error}
+    <div className="min-h-screen bg-slate-50/50 dark:bg-zinc-950">
+      <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 lg:px-8">
+        <div className="mb-6 flex items-center justify-between">
+          <button
+            type="button"
+            onClick={() => router.push('/')}
+            className="text-sm text-teal-600 hover:underline dark:text-teal-400"
+          >
+            ← Back to Dashboard
+          </button>
         </div>
-      )}
 
-      <div className="mt-6 space-y-6">
-        <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Account Information</h2>
-          <div className="mt-4 grid gap-4 sm:grid-cols-2">
-            <div>
-              <span className="text-sm text-gray-500 dark:text-gray-400">Email</span>
-              <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{email || '—'}</p>
-            </div>
-            <div>
-              <span className="text-sm text-gray-500 dark:text-gray-400">Department</span>
-              <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{department || '—'}</p>
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-zinc-50 sm:text-3xl">Settings</h1>
+
+        {error && (
+          <div className="mt-4 rounded-lg bg-rose-50 p-4 text-sm text-rose-600 dark:bg-rose-950/20 dark:text-rose-400">
+            {error}
+          </div>
+        )}
+
+        <div className="mt-6 space-y-6">
+          <div className="rounded-xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 p-6 shadow-sm">
+            <h2 className="text-lg font-semibold text-slate-900 dark:text-zinc-100">Account Information</h2>
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              <div>
+                <span className="text-sm text-slate-500 dark:text-zinc-400">Email</span>
+                <p className="text-sm font-medium text-slate-900 dark:text-zinc-100">{email || '—'}</p>
+              </div>
+              <div>
+                <span className="text-sm text-slate-500 dark:text-zinc-400">Department</span>
+                <p className="text-sm font-medium text-slate-900 dark:text-zinc-100">{department || '—'}</p>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Preferences</h2>
-          <div className="mt-4">
-            <button
-              type="button"
-              onClick={handleThemeToggle}
-              className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
-            >
-              Switch to {theme === 'light' ? 'Dark' : 'Light'} Mode
-            </button>
+          <div className="rounded-xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 p-6 shadow-sm">
+            <h2 className="text-lg font-semibold text-slate-900 dark:text-zinc-100">Preferences</h2>
+            <div className="mt-4">
+              <button
+                type="button"
+                onClick={handleThemeToggle}
+                className="rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-4 py-2 text-sm font-medium text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800/50 transition-colors"
+              >
+                Switch to {theme === 'light' ? 'Dark' : 'Light'} Mode
+              </button>
+            </div>
           </div>
-        </div>
 
-        <div className="rounded-xl border border-red-200 bg-white p-6 shadow-sm dark:border-red-800/50 dark:bg-gray-800">
-          <h2 className="text-lg font-semibold text-red-900 dark:text-red-300">Session</h2>
-          <div className="mt-4">
-            <button
-              type="button"
-              onClick={handleSignOut}
-              disabled={signOutLoading}
-              className="rounded-lg border border-red-200 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-900/20"
-            >
-              {signOutLoading ? 'Signing out…' : 'Sign Out'}
-            </button>
+          <div className="rounded-xl border border-rose-200/50 dark:border-rose-800/50 bg-white dark:bg-zinc-900 p-6 shadow-sm">
+            <h2 className="text-lg font-semibold text-rose-900 dark:text-rose-300">Session</h2>
+            <div className="mt-4">
+              <button
+                type="button"
+                onClick={handleSignOut}
+                disabled={signOutLoading}
+                className="rounded-lg border border-rose-200 dark:border-rose-800/50 px-4 py-2 text-sm font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-50/50 dark:hover:bg-rose-900/20 disabled:opacity-50 transition-colors"
+              >
+                {signOutLoading ? 'Signing out…' : 'Sign Out'}
+              </button>
+            </div>
           </div>
         </div>
       </div>

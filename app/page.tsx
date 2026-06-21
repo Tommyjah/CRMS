@@ -12,7 +12,7 @@ export default function Dashboard() {
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [userProfile, setUserProfile] = useState<{ department: string | null; role: string | null } | null>(null)
 
-useEffect(() => {
+  useEffect(() => {
     getUserProfile().then(({ data }) => {
       if (data) setUserProfile(data)
     })
@@ -24,12 +24,12 @@ useEffect(() => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50" suppressHydrationWarning={true}>
+      <div className="min-h-screen bg-slate-50/50 dark:bg-zinc-950" suppressHydrationWarning={true}>
         <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 lg:px-8">
-          <h1 className="text-2xl font-bold text-gray-900 sm:text-3xl">Project Approvals</h1>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-zinc-50 sm:text-3xl">Project Approvals</h1>
           <div className="mt-6 grid gap-4">
             {[...Array(3)].map((_, i) => (
-              <div key={i} className="h-28 animate-pulse rounded-xl bg-gray-200" />
+              <div key={i} className="h-28 animate-pulse rounded-xl bg-slate-200 dark:bg-zinc-800" />
             ))}
           </div>
         </div>
@@ -39,10 +39,10 @@ useEffect(() => {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50" suppressHydrationWarning={true}>
+      <div className="min-h-screen bg-slate-50/50 dark:bg-zinc-950" suppressHydrationWarning={true}>
         <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 lg:px-8">
-          <h1 className="text-2xl font-bold text-gray-900 sm:text-3xl">Project Approvals</h1>
-          <div className="mt-6 rounded-xl border border-red-200 bg-red-50 p-4 text-center text-red-800">
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-zinc-50 sm:text-3xl">Project Approvals</h1>
+          <div className="mt-6 rounded-xl border border-rose-200 bg-rose-50 p-4 text-center text-rose-800 dark:bg-rose-950/20 dark:text-rose-400">
             Error: {error}
           </div>
         </div>
@@ -50,20 +50,20 @@ useEffect(() => {
     )
   }
 
-return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900" suppressHydrationWarning={true}>
+  return (
+    <div className="min-h-screen bg-slate-50/50 dark:bg-zinc-950" suppressHydrationWarning={true}>
       <OnboardingModal />
       <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 lg:px-8">
-<div className="flex items-center justify-between gap-4">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 sm:text-3xl">Project Approvals</h1>
+        <div className="flex items-center justify-between gap-4">
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-zinc-50 sm:text-3xl">Project Approvals</h1>
           <div className="flex items-center gap-3">
-            <span className="rounded-full bg-gray-200 px-3 py-1 text-xs font-medium text-gray-700">
+            <span className="rounded-full bg-slate-200/50 dark:bg-zinc-800/50 px-3 py-1 text-xs font-medium text-slate-700 dark:text-zinc-300">
               {data.length} {data.length === 1 ? 'request' : 'requests'}
             </span>
             {(userProfile?.role === 'INITIATOR' || userProfile?.role === 'REQUESTER') && (
               <Link
                 href="/create-request"
-                className="rounded-lg bg-blue-600 px-6 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                className="rounded-lg bg-teal-600 px-6 py-2 text-sm font-medium text-white hover:bg-teal-700 transition-colors"
               >
                 + New Request
               </Link>
@@ -72,13 +72,13 @@ return (
         </div>
 
         {data.length === 0 ? (
-          <div className="mt-10 rounded-xl border border-dashed border-gray-300 bg-white p-10 text-center text-gray-500">
+          <div className="mt-10 rounded-xl border border-dashed border-slate-300/50 dark:border-zinc-700/50 bg-white dark:bg-zinc-900 p-10 text-center text-slate-500 dark:text-zinc-400">
             No change requests found. New submissions will appear here automatically.
           </div>
         ) : (
           <div className="mt-6 grid gap-4">
             {data.map((req) => (
-<ChangeRequestRow
+              <ChangeRequestRow
                 key={req.id}
                 req={req}
                 calculateLagHours={calculateLagHours}
@@ -90,14 +90,12 @@ return (
             ))}
           </div>
         )}
-{toast && (
-          <div className="fixed bottom-4 right-4 z-50 rounded-lg border border-gray-200 bg-white px-4 py-3 shadow-lg dark:border-gray-700 dark:bg-gray-800" suppressHydrationWarning={true}>
-            <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{toast}</p>
+        {toast && (
+          <div className="fixed bottom-4 right-4 z-50 rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-4 py-3 shadow-lg" suppressHydrationWarning={true}>
+            <p className="text-sm font-medium text-slate-900 dark:text-zinc-100">{toast}</p>
           </div>
         )}
       </div>
     </div>
   )
 }
-
-

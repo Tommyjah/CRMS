@@ -64,8 +64,8 @@ export default function StatusButtons({ requestId, status, userProfile, onReject
         disabled={loading || !isTargetApprover}
         className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
           isTargetApprover && !loading
-            ? 'bg-green-600 text-white hover:bg-green-700'
-            : 'cursor-not-allowed bg-gray-100 text-gray-400'
+            ? 'bg-emerald-600 text-white hover:bg-emerald-700'
+            : 'cursor-not-allowed bg-slate-100 text-slate-400 dark:bg-zinc-800/50 dark:text-zinc-500'
         }`}
       >
         {loading ? 'Processing…' : 'Approve'}
@@ -74,7 +74,7 @@ export default function StatusButtons({ requestId, status, userProfile, onReject
         type="button"
         onClick={() => handleStatusUpdate('REJECT')}
         disabled={loading}
-        className="rounded-lg bg-red-600 px-3 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+        className="rounded-lg bg-rose-600 px-3 py-2 text-sm font-medium text-white hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
       >
         Reject
       </button>
