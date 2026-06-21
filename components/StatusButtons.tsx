@@ -9,8 +9,10 @@ type StatusButtonsProps = {
   userProfile: {
     department: string | null
     role: string | null
+    email?: string | null
   } | null
   onRejected?: () => void
+  approverEmail?: string | null
 }
 
 export default function StatusButtons({ requestId, status, userProfile, onRejected }: StatusButtonsProps) {
@@ -61,9 +63,9 @@ export default function StatusButtons({ requestId, status, userProfile, onReject
       <button
         type="button"
         onClick={() => handleStatusUpdate('APPROVE')}
-        disabled={loading || !isTargetApprover}
+        disabled={loading || !canTakeAction}
         className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-          isTargetApprover && !loading
+          canTakeAction && !loading
             ? 'bg-emerald-600 text-white hover:bg-emerald-700'
             : 'cursor-not-allowed bg-slate-100 text-slate-400 dark:bg-zinc-800/50 dark:text-zinc-500'
         }`}
@@ -73,7 +75,7 @@ export default function StatusButtons({ requestId, status, userProfile, onReject
       <button
         type="button"
         onClick={() => handleStatusUpdate('REJECT')}
-        disabled={loading}
+        disabled={loading || !canTakeAction}
         className="rounded-lg bg-rose-600 px-3 py-2 text-sm font-medium text-white hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
       >
         Reject

@@ -156,7 +156,7 @@ type ChangeRequestRowProps = {
   onStatusChange: (id: string, status: string | null) => void
   expandedId: string | null
   setExpandedId: (id: string | null) => void
-  userProfile: { department: string | null; role: string | null } | null
+  userProfile: { department: string | null; role: string | null; email?: string | null } | null
 }
 
 export default function ChangeRequestRow({
@@ -340,7 +340,12 @@ export default function ChangeRequestRow({
           >
             🔍 Details
           </button>
-          <StatusButtons requestId={req.id} status={req.status} userProfile={userProfile} />
+          <StatusButtons 
+            requestId={req.id} 
+            status={req.status} 
+            userProfile={userProfile}
+            approverEmail={req.status === 'PENDING_DEPT_1' ? req.fixed_network_approver : req.status === 'PENDING_DEPT_2' ? req.wire_line_approver : req.status === 'PENDING_DEPT_3' ? req.engineering_approver : null}
+          />
         </div>
       </div>
 
