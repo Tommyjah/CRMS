@@ -50,12 +50,12 @@ useEffect(() => {
     )
   }
 
-  return (
-    <div className="min-h-screen bg-gray-50" suppressHydrationWarning={true}>
+return (
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900" suppressHydrationWarning={true}>
       <OnboardingModal />
       <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 lg:px-8">
 <div className="flex items-center justify-between gap-4">
-          <h1 className="text-2xl font-bold text-gray-900 sm:text-3xl">Project Approvals</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 sm:text-3xl">Project Approvals</h1>
           <div className="flex items-center gap-3">
             <span className="rounded-full bg-gray-200 px-3 py-1 text-xs font-medium text-gray-700">
               {data.length} {data.length === 1 ? 'request' : 'requests'}
@@ -90,9 +90,9 @@ useEffect(() => {
             ))}
           </div>
         )}
-        {toast && (
-          <div className="fixed bottom-4 right-4 z-50 rounded-lg border border-gray-200 bg-white px-4 py-3 shadow-lg" suppressHydrationWarning={true}>
-            <p className="text-sm font-medium text-gray-900">{toast}</p>
+{toast && (
+          <div className="fixed bottom-4 right-4 z-50 rounded-lg border border-gray-200 bg-white px-4 py-3 shadow-lg dark:border-gray-700 dark:bg-gray-800" suppressHydrationWarning={true}>
+            <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{toast}</p>
           </div>
         )}
       </div>

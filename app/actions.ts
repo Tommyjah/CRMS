@@ -9,18 +9,19 @@ export type RequestStatus = 'PENDING_DEPT_1' | 'PENDING_DEPT_2' | 'PENDING_DEPT_
 export async function createChangeRequest(
   formData: FormData, 
   activities: { serial_number: number; activity: string; unit: string; contract_qty: string; executed_qty: string; reason: string }[],
-  extraFields?: {
-    site_coordinates?: string
-    route_impact?: string
-    duct_sizes?: string
-    material_cost_variation?: string
-    route_deviations?: string
-    estimated_downtime?: string
-    technical_reason?: string
-    fixed_network_approver?: string
-    wire_line_approver?: string
-    engineering_approver?: string
-  }
+extraFields?: {
+     site_coordinates?: string
+     route_impact?: string
+     duct_sizes?: string
+     material_cost_variation?: string
+     route_deviations?: string
+     estimated_downtime?: string
+     technical_reason?: string
+     fixed_network_approver?: string
+     wire_line_approver?: string
+     engineering_approver?: string
+     target_segments?: string
+   }
 ) {
   const supabase = await createClient()
 
@@ -53,19 +54,20 @@ export async function createChangeRequest(
     user_id: user.id,
     // Use the nullish coalescing operator (??) to guarantee a strict string
     initiated_by: profile.department ?? 'Initiator',
-    status: 'PENDING_DEPT_1',
-    // Step 3: Add extra technical and approver fields
-    site_coordinates: extraFields?.site_coordinates ?? null,
-    route_impact: extraFields?.route_impact ?? null,
-    duct_sizes: extraFields?.duct_sizes ?? null,
-    material_cost_variation: extraFields?.material_cost_variation ?? null,
-    route_deviations: extraFields?.route_deviations ?? null,
-    estimated_downtime: extraFields?.estimated_downtime ?? null,
-    technical_reason: extraFields?.technical_reason ?? null,
-    fixed_network_approver: extraFields?.fixed_network_approver ?? null,
-    wire_line_approver: extraFields?.wire_line_approver ?? null,
-    engineering_approver: extraFields?.engineering_approver ?? null,
-  }
+status: 'PENDING_DEPT_1',
+     target_segments: extraFields?.target_segments ?? null,
+     // Step 3: Add extra technical and approver fields
+     site_coordinates: extraFields?.site_coordinates ?? null,
+     route_impact: extraFields?.route_impact ?? null,
+     duct_sizes: extraFields?.duct_sizes ?? null,
+     material_cost_variation: extraFields?.material_cost_variation ?? null,
+     route_deviations: extraFields?.route_deviations ?? null,
+     estimated_downtime: extraFields?.estimated_downtime ?? null,
+     technical_reason: extraFields?.technical_reason ?? null,
+     fixed_network_approver: extraFields?.fixed_network_approver ?? null,
+     wire_line_approver: extraFields?.wire_line_approver ?? null,
+     engineering_approver: extraFields?.engineering_approver ?? null,
+   }
 
   // 2. Cast the payload 'as any' inside the insert function to satisfy the Supabase client
   const { data, error } = await supabase
