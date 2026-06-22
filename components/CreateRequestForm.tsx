@@ -39,9 +39,6 @@ type CreateRequestFormProps = {
   } | null
 }
 
-const INITIATING_DEPARTMENTS = ['Wire Line Planning', 'Fixed Network', 'Engineering']
-const AUTHORIZED_ROLES = ['INITIATOR', 'REQUESTER']
-
 export default function CreateRequestForm({ userProfile }: CreateRequestFormProps) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
@@ -73,9 +70,7 @@ const [technicalSpec, setTechnicalSpec] = useState<TechnicalSpec>({
     engineering_approver: '',
   })
 
-  const isAuthorizedDept = !!userProfile?.department && INITIATING_DEPARTMENTS.includes(userProfile.department)
-  const isAuthorizedRole = !!userProfile?.role && AUTHORIZED_ROLES.includes(userProfile.role)
-  const canSubmit = isAuthorizedDept || isAuthorizedRole
+  const canSubmit = userProfile?.role === 'INITIATOR'
 
   const addActivityRow = () => {
     setActivities((prev) => [

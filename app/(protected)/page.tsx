@@ -7,20 +7,15 @@ import ChangeRequestRow from '@/components/ChangeRequestRow'
 import OnboardingModal from '@/components/OnboardingModal'
 import { getUserProfile } from '@/app/actions'
 
-const INITIATING_DEPARTMENTS = ['Wire Line Planning', 'Fixed Network', 'Engineering']
-const AUTHORIZED_ROLES = ['INITIATOR', 'REQUESTER']
-
 function NewRequestButton({ userProfile }: { userProfile: { department: string | null; role: string | null; email?: string | null } | null }) {
-  const isAuthorizedDept = !!userProfile?.department && INITIATING_DEPARTMENTS.includes(userProfile.department)
-  const isAuthorizedRole = !!userProfile?.role && AUTHORIZED_ROLES.includes(userProfile.role)
-  const canInitiate = isAuthorizedDept || isAuthorizedRole
+  const canInitiate = userProfile?.role === 'INITIATOR'
 
   if (!canInitiate) {
     return (
       <button
         type="button"
         disabled
-        title="Only authorized planning departments can initiate new requests."
+        title="Only users with the INITIATOR role can create new requests."
         className="rounded-lg bg-slate-100 px-6 py-2 text-sm font-medium text-slate-400 cursor-not-allowed border border-slate-200/60 dark:bg-zinc-800/50 dark:text-zinc-500 dark:border-zinc-700/50"
       >
         + New Request

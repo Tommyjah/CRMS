@@ -6,12 +6,7 @@ export default async function CreateRequestPage() {
   const { data: userProfile } = await getUserProfile()
   
   // Strict authorization: Only INITIATOR and REQUESTER roles can create requests
-  const initiatingDepartments = ['Wire Line Planning', 'Fixed Network', 'Engineering']
-  const isAuthorizedDept = !!userProfile?.department && initiatingDepartments.includes(userProfile.department)
-  const isAuthorizedRole = !!userProfile?.role && (userProfile.role === 'INITIATOR' || userProfile.role === 'REQUESTER')
-  const canAccess = isAuthorizedDept || isAuthorizedRole
-
-  if (!userProfile || !canAccess) {
+  if (!userProfile || userProfile.role !== 'INITIATOR') {
     return (
       <div className="min-h-screen bg-slate-50/50 dark:bg-zinc-950 flex items-center justify-center px-4">
         <div className="text-center p-8 max-w-md rounded-xl border border-rose-200/50 dark:border-rose-800/50 bg-white dark:bg-zinc-900 shadow-sm">
