@@ -50,7 +50,7 @@ export default function OnboardingModal() {
     window.location.reload()
   }
 
-  const needsOnboarding = !loading && !profile?.department
+  const needsOnboarding = !loading && (profile?.department === null || profile?.department === undefined || profile?.department === '')
 
   if (!needsOnboarding) {
     return null

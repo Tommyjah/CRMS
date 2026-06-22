@@ -33,30 +33,24 @@ export async function GET(request: Request) {
     const { data, error } = await supabase.auth.exchangeCodeForSession(code)
     
     if (!error && data?.user) {
-      // 🔥 Ensure profile exists for OAuth users - auto upsert on first login
-      const { data: existingProfile } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('id', data.user.id)
-        .single()
-      
-      if (!existingProfile) {
-        // Create profile with defaults for OAuth sign-in
-        await supabase
-          .from('profiles')
-          .upsert({
-            id: data.user.id,
-            email: data.user.email ?? '',
-            full_name: data.user.user_metadata?.full_name ?? '',
-            department: null,
-            role: 'REQUESTER',
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-            is_active: true,
-          }, {
-            onConflict: 'id',
-          })
-      }
+// 🔥 Ensure profile exists for OAuth users - auto upsert on first login
+       if (data.user) {
+         // Always update department to null for OAuth users needing onboarding
+         await supabase
+           .from('profiles')
+           .upsert({
+             id: data.user.id,
+             email: data.user.email ?? '',
+             full_name: data.user.user_metadata?.full_name ?? '',
+             department: null,
+             role: 'REQUESTER',
+             created_at: new Date().toISOString(),
+             updated_at: new Date().toISOString(),
+             is_active: true,
+           }, {
+             onConflict: 'id',
+           })
+       }
       
       return NextResponse.redirect(`${origin}${next}`)
     }
