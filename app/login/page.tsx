@@ -4,8 +4,9 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClientBrowser } from '@/lib/supabase/client'
 import { useChangeRequests } from '@/hooks/useChangeRequests'
+import OnboardingModal from '@/components/OnboardingModal'
 import { ChangeRequestCard } from '@/components/ChangeRequestCard'
-import { getUserProfile } from '@/app/actions'
+import { getUserProfile, updateUserProfile } from '@/app/actions'
 import type { Database } from '@/types_db'
 
 type AuthMode = 'login' | 'signup'
@@ -263,6 +264,7 @@ export default function UnifiedPage() {
 
 return (
     <div className="min-h-screen w-full bg-slate-50/50 dark:bg-zinc-950 text-slate-900 dark:text-zinc-50 transition-colors duration-200">
+      <OnboardingModal />
       <header className="border-b border-slate-200/80 dark:border-zinc-800/80 pb-4 flex justify-between items-center max-w-5xl mx-auto px-4 pt-6">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-zinc-100">Change Requests Pipeline</h1>
