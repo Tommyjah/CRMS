@@ -70,7 +70,7 @@ const [technicalSpec, setTechnicalSpec] = useState<TechnicalSpec>({
     engineering_approver: '',
   })
 
-  const canSubmit = userProfile?.role === 'INITIATOR'
+  const canSubmit = userProfile?.department === 'Initiator'
 
   const addActivityRow = () => {
     setActivities((prev) => [
@@ -468,7 +468,7 @@ const [technicalSpec, setTechnicalSpec] = useState<TechnicalSpec>({
                     ? 'bg-teal-600 text-white hover:bg-teal-700'
                     : 'bg-slate-100 text-slate-400 dark:bg-zinc-800/50 dark:text-zinc-500 cursor-not-allowed border border-slate-200/60 dark:border-zinc-700/50 hover:bg-slate-100'
                 }`}
-                title={!canSubmit ? 'Your account profile is not authorized to submit network change requests.' : undefined}
+                title={!canSubmit ? 'Only users in the Initiator department can submit new requests.' : undefined}
               >
                 {loading ? 'Submitting...' : 'Submit Change Request'}
               </button>

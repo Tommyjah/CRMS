@@ -8,14 +8,14 @@ import OnboardingModal from '@/components/OnboardingModal'
 import { getUserProfile } from '@/app/actions'
 
 function NewRequestButton({ userProfile }: { userProfile: { department: string | null; role: string | null; email?: string | null } | null }) {
-  const canInitiate = userProfile?.role === 'INITIATOR'
+  const canInitiate = userProfile?.department === 'Initiator'
 
   if (!canInitiate) {
     return (
       <button
         type="button"
         disabled
-        title="Only users with the INITIATOR role can create new requests."
+        title="Only users in the Initiator department can create new requests."
         className="rounded-lg bg-slate-100 px-6 py-2 text-sm font-medium text-slate-400 cursor-not-allowed border border-slate-200/60 dark:bg-zinc-800/50 dark:text-zinc-500 dark:border-zinc-700/50"
       >
         + New Request

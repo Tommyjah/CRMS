@@ -5,8 +5,8 @@ import Link from 'next/link'
 export default async function CreateRequestPage() {
   const { data: userProfile } = await getUserProfile()
   
-  // Strict authorization: Only INITIATOR and REQUESTER roles can create requests
-  if (!userProfile || userProfile.role !== 'INITIATOR') {
+    // Strict authorization: Only users in the 'Initiator' department can create requests
+  if (!userProfile || userProfile.department !== 'Initiator') {
     return (
       <div className="min-h-screen bg-slate-50/50 dark:bg-zinc-950 flex items-center justify-center px-4">
         <div className="text-center p-8 max-w-md rounded-xl border border-rose-200/50 dark:border-rose-800/50 bg-white dark:bg-zinc-900 shadow-sm">
