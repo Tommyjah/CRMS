@@ -153,7 +153,6 @@ function formatDate(value: string | null | undefined) {
 type ChangeRequestRowProps = {
   req: ChangeRequestWithDetails
   calculateLagHours: (req: RequestWithAudit) => number
-  onStatusChange: (id: string, status: string | null) => void
   expandedId: string | null
   setExpandedId: (id: string | null) => void
   userProfile: { department: string | null; role: string | null; email?: string | null } | null
@@ -162,7 +161,6 @@ type ChangeRequestRowProps = {
 export default function ChangeRequestRow({
   req,
   calculateLagHours,
-  onStatusChange,
   expandedId,
   setExpandedId,
   userProfile,
@@ -324,19 +322,6 @@ export default function ChangeRequestRow({
           >
             {isGeneratingPdf ? 'Generating...' : 'Download PDF'}
           </button>
-          <select
-            value={req.status ?? ''}
-            onChange={(e) => onStatusChange(req.id, e.target.value || null)}
-            disabled={access.locked}
-            className="rounded-lg border border-slate-300 dark:border-zinc-700 px-3 py-2 text-sm font-medium text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60 transition-colors"
-          >
-            <option value="" disabled>Set status</option>
-            {statusOptions.map((opt) => (
-              <option key={opt.value} value={opt.value} disabled={access.locked && !ROLE_ACCESS[opt.value].canApprove && opt.value !== 'DRAFT'}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
           <button
             type="button"
             onClick={() => setIsDrawerOpen(true)}
