@@ -18,12 +18,10 @@ type StatusButtonsProps = {
 export default function StatusButtons({ requestId, status, userProfile, onRejected, approverEmail }: StatusButtonsProps) {
   const [loading, setLoading] = useState(false)
 
-  // Hide buttons for final states
   if (status === 'APPROVED' || status === 'REJECTED' || status === 'DRAFT') return null
 
-  // Defensive department matching logic
-  const currentUserRole = userProfile?.role?.trim().toUpperCase()
   const currentUserDept = userProfile?.department?.trim().toUpperCase()
+  const currentUserEmail = userProfile?.email?.trim().toLowerCase() ?? null
 
   const allowedDeptMap: Record<string, string> = {
     PENDING_DEPT_1: 'FIXED NETWORK',
@@ -32,15 +30,21 @@ export default function StatusButtons({ requestId, status, userProfile, onReject
   }
 
   const targetDept = allowedDeptMap[status ?? '']
-  const isAuthorizedApprover =
-    currentUserRole === 'APPROVER' &&
-    !!currentUserDept &&
-    !!targetDept &&
-    currentUserDept === targetDept
+  const isDepartmentMatch = !!currentUserDept && !!targetDept && currentUserDept === targetDept
 
-  const isAssignedApprover = approverEmail && userProfile?.email === approverEmail
+  const normalizedApproverEmail = approverEmail?.trim().toLowerCase() ?? null
+  const isAssignedApprover = !!currentUserEmail && !!normalizedApproverEmail && currentUserEmail === normalizedApproverEmail
 
-  const canTakeAction = isAuthorizedApprover || isAssignedApprover
+  const canTakeAction = isDepartmentMatch || isAssignedApprover
+
+  if (!userProfile) {
+    return (
+      <div className="flex gap-2">
+        <button type="button" disabled className="h-9 w-24 animate-pulse rounded-lg bg-slate-100 dark:bg-zinc-800/50" />
+        <button type="button" disabled className="h-9 w-16 animate-pulse rounded-lg bg-slate-100 dark:bg-zinc-800/50" />
+      </div>
+    )
+  }
 
   const handleStatusUpdate = async (action: 'APPROVE' | 'REJECT') => {
     setLoading(true)
@@ -80,7 +84,11 @@ export default function StatusButtons({ requestId, status, userProfile, onReject
         type="button"
         onClick={() => handleStatusUpdate('REJECT')}
         disabled={loading || !canTakeAction}
-        className="rounded-lg bg-rose-600 px-3 py-2 text-sm font-medium text-white hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
+        className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+          canTakeAction && !loading
+            ? 'bg-rose-600 text-white hover:bg-rose-700'
+            : 'cursor-not-allowed bg-slate-100 text-slate-400 dark:bg-zinc-800/50 dark:text-zinc-500'
+        }`}
       >
         Reject
       </button>

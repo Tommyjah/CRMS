@@ -26,7 +26,7 @@ function Navbar() {
   const router = useRouter()
   const pathname = usePathname()
   const [open, setOpen] = useState(false)
-  const [userProfile, setUserProfile] = useState<{ department: string | null; role: string | null } | null>(null)
+  const [userProfile, setUserProfile] = useState<{ department: string | null; role: string | null; email: string | null } | null>(null)
 
   const isActive = (path: string) => pathname === path
 

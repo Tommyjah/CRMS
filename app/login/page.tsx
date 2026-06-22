@@ -121,6 +121,8 @@ export default function UnifiedPage() {
         setAuthError(signInError.message)
         return
       }
+
+      router.push('/')
     } catch (err) {
       setAuthError(err instanceof Error ? err.message : 'An unexpected error occurred')
     } finally {

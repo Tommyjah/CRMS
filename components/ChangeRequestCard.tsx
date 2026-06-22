@@ -5,10 +5,11 @@ import { ROLE_ACCESS } from '@/hooks/useChangeRequests'
 import ChangeRequestDrawer from '@/components/ChangeRequestDrawer'
 
 interface ChangeRequestCardProps {
-  request: any // 👈 Kept as any to maintain your immediate type resolution
+  request: any
   userProfile: {
     department: string | null
     role: string | null
+    email?: string | null
   } | null
   onApprove: (id: string) => void
   onReject?: (id: string) => void
@@ -19,18 +20,20 @@ export function ChangeRequestCard({ request, userProfile, onApprove, onReject }:
   
   const statusConfig = ROLE_ACCESS[request?.status ?? ''] ?? ROLE_ACCESS.DRAFT
 
-  const currentUserRole = userProfile?.role?.trim()
   const currentUserDept = userProfile?.department?.trim()
   const targetStageDept = statusConfig?.department?.trim() ?? ''
+  const currentUserEmail = userProfile?.email?.trim().toLowerCase() ?? null
+  const assignedApproverEmail = request?.fixed_network_approver ?? request?.wire_line_approver ?? request?.engineering_approver ?? null
+  const normalizedAssignedEmail = assignedApproverEmail?.trim().toLowerCase() ?? null
 
   const isTargetApprover =
-    !!currentUserRole &&
-    currentUserRole.toUpperCase() === 'APPROVER' &&
     !!currentUserDept &&
     !!targetStageDept &&
     currentUserDept === targetStageDept
 
-  const isButtonActive = !!statusConfig?.canApprove && isTargetApprover
+  const isAssignedApprover = !!currentUserEmail && !!normalizedAssignedEmail && currentUserEmail === normalizedAssignedEmail
+
+  const isButtonActive = !!statusConfig?.canApprove && (isTargetApprover || isAssignedApprover)
 
   return (
     <>
@@ -63,20 +66,23 @@ export function ChangeRequestCard({ request, userProfile, onApprove, onReject }:
             className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
               isButtonActive
                 ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm cursor-pointer'
-                : 'bg-slate-100/50 dark:bg-zinc-800/50 text-slate-400 dark:text-zinc-500 cursor-not-allowed border border-slate-200/80 dark:border-zinc-700'
+                : 'cursor-not-allowed bg-slate-100/50 dark:bg-zinc-800/50 text-slate-400 dark:text-zinc-500 border border-slate-200/80 dark:border-zinc-700'
             }`}
           >
             {isButtonActive ? '⚡ Approve' : `⏱️ Awaiting ${statusConfig?.label || 'Next Stage'}`}
           </button>
 
-          {isButtonActive && onReject && (
-            <button
-              onClick={() => onReject(request.id)}
-              className="px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-600 text-sm font-semibold rounded-lg transition-colors border border-transparent hover:border-rose-200 dark:bg-rose-950/20 dark:hover:bg-rose-900/30 dark:text-rose-400 dark:hover:border-rose-800/50"
-            >
-              Reject
-            </button>
-          )}
+          <button
+            onClick={() => onReject?.(request.id)}
+            disabled={!isButtonActive}
+            className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+              isButtonActive
+                ? 'bg-rose-600 hover:bg-rose-700 text-white shadow-sm cursor-pointer'
+                : 'cursor-not-allowed bg-slate-100/50 dark:bg-zinc-800/50 text-slate-400 dark:text-zinc-500 border border-slate-200/80 dark:border-zinc-700'
+            }`}
+          >
+            Reject
+          </button>
 
           <button
             type="button"
