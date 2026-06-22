@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { getUserProfile, updateUserProfile } from '@/app/actions'
 
-const validDepartments = ['Fixed Network', 'Wire Line Planning', 'Engineering']
+const validDepartments = ['Initiator', 'Fixed Network', 'Wire Line Planning', 'Engineering']
 
 import type { Database } from '@/types_db'
 
@@ -48,7 +48,7 @@ export default function OnboardingModal() {
     window.location.reload()
   }
 
-  const needsDepartment = !loading && (!profile?.department || profile.department === 'Initiator' || profile.department === '')
+  const needsDepartment = !loading && !profile?.department
 
   if (!needsDepartment) {
     return null
