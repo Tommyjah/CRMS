@@ -216,7 +216,7 @@ export async function getUserProfile() {
   return { error: null, data: profile ?? defaultProfile }
 }
 
-export async function updateUserProfile(department: string) {
+export async function updateUserProfile(department: string, fullName?: string) {
   const supabase = await createClient()
 
   const { data: { user }, error: userError } = await supabase.auth.getUser()
@@ -229,8 +229,9 @@ export async function updateUserProfile(department: string) {
     .upsert({
       id: user.id,
       email: user.email ?? '',
+      full_name: fullName ?? user.user_metadata?.full_name ?? '',
       department,
-      role: 'REQUESTER',
+      role: department === 'Initiator' ? 'INITIATOR' : 'REQUESTER',
       updated_at: new Date().toISOString(),
     }, {
       onConflict: 'id',
