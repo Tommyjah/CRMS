@@ -51,7 +51,10 @@ function Navbar() {
     <nav className="border-b border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900">
       <div className="mx-auto max-w-5xl px-4 py-3 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between">
-          <button type="button" onClick={() => router.push('/')} className="text-lg font-semibold text-slate-900 dark:text-zinc-100">CRMS</button>
+          <div className="flex items-center gap-3">
+          <button type="button" onClick={() => router.push('/')} className="text-lg font-semibold text-slate-900 dark:text-zinc-100">Ethio Telecom | CRMS</button>
+          <span className="bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 text-xs font-medium px-2.5 py-0.5 rounded-full border border-slate-200/60">Enterprise Instance</span>
+        </div>
 
           <div className="flex items-center gap-3">
             {userProfile && (

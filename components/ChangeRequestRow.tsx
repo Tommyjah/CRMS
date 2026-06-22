@@ -267,43 +267,47 @@ export default function ChangeRequestRow({
   return (
     <>
       <div className={`rounded-xl border bg-white shadow-sm transition-all duration-200 hover:shadow-md hover:border-teal-500/30 dark:bg-zinc-900 dark:border-zinc-800/80 ${stale ? 'border-rose-300' : 'border-slate-200/80'}`} suppressHydrationWarning={true}>
-<div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <h2 className="truncate text-lg font-bold text-slate-900 dark:text-zinc-100">{req.project_name}</h2>
-              <StatusBadge status={req.status} />
-              <LagBadge hours={lagHours} />
-            </div>
-            <div className="mt-3 grid gap-2 text-sm text-slate-600 dark:text-zinc-300 sm:grid-cols-2">
-              <div>
-                <span className="font-medium text-slate-500 dark:text-zinc-400">Project Number:</span>{' '}
-                {projectNumber}
-              </div>
-              <div>
-                <span className="font-medium text-slate-500 dark:text-zinc-400">Initiated By:</span>{' '}
-                {initiator ?? '—'}
-              </div>
-              <div>
-                <span className="font-medium text-slate-500 dark:text-zinc-400">Priority Level:</span>{' '}
-                {priority}
-              </div>
-              <div>
-                <span className="font-medium text-slate-500 dark:text-zinc-400">Current holder:</span>{' '}
-                {access.department || '—'}
-              </div>
-            </div>
-            {description && (
-              <div className="mt-3 rounded-lg bg-slate-50/50 dark:bg-zinc-800/30 p-3">
-                <p className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-zinc-400">
-                  Change Description
-                </p>
-                <p className="mt-1 text-sm text-slate-700 dark:text-zinc-200">{description}</p>
-              </div>
-            )}
-            <time className="mt-2 block text-xs text-slate-500 dark:text-zinc-500">Created {formatDate(req.created_at)}</time>
-          </div>
+        <div className="grid grid-cols-1 gap-6 p-4 md:grid-cols-12 md:p-5">
+        <div className="md:col-span-12 flex flex-wrap items-center gap-2">
+          <h2 className="truncate text-lg font-bold text-slate-900 dark:text-zinc-100">{req.project_name}</h2>
+          <StatusBadge status={req.status} />
+          <LagBadge hours={lagHours} />
+        </div>
 
-        <div className="flex shrink-0 flex-wrap items-center gap-2">
+        <div className="md:col-span-5 text-sm text-slate-600 dark:text-zinc-300">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <div>
+              <span className="font-medium text-slate-500 dark:text-zinc-400">Project Number:</span>{' '}
+              {projectNumber}
+            </div>
+            <div>
+              <span className="font-medium text-slate-500 dark:text-zinc-400">Initiated By:</span>{' '}
+              {initiator ?? '—'}
+            </div>
+            <div>
+              <span className="font-medium text-slate-500 dark:text-zinc-400">Priority Level:</span>{' '}
+              {priority}
+            </div>
+            <div>
+              <span className="font-medium text-slate-500 dark:text-zinc-400">Current holder:</span>{' '}
+              {access.department || '—'}
+            </div>
+          </div>
+        </div>
+
+        <div className="md:col-span-7 text-sm text-slate-700 dark:text-zinc-300 bg-slate-50/50 dark:bg-zinc-800/30 p-3 rounded-lg border border-slate-200/80 dark:border-zinc-800/80">
+          {description && (
+            <>
+              <p className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-zinc-400">
+                Change Description
+              </p>
+              <p className="mt-1 text-slate-700 dark:text-zinc-200">{description}</p>
+            </>
+          )}
+        </div>
+
+        <div className="md:col-span-12 flex flex-wrap items-center gap-2">
+          <time className="mr-auto text-xs text-slate-500 dark:text-zinc-500">Created {formatDate(req.created_at)}</time>
           <button
             type="button"
             onClick={() => toggleAuditLog(req.id)}
@@ -340,9 +344,9 @@ export default function ChangeRequestRow({
           >
             🔍 Details
           </button>
-          <StatusButtons 
-            requestId={req.id} 
-            status={req.status} 
+          <StatusButtons
+            requestId={req.id}
+            status={req.status}
             userProfile={userProfile}
             approverEmail={req.status === 'PENDING_DEPT_1' ? req.fixed_network_approver : req.status === 'PENDING_DEPT_2' ? req.wire_line_approver : req.status === 'PENDING_DEPT_3' ? req.engineering_approver : null}
           />
