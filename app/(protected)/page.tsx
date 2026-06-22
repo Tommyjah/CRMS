@@ -7,6 +7,37 @@ import ChangeRequestRow from '@/components/ChangeRequestRow'
 import OnboardingModal from '@/components/OnboardingModal'
 import { getUserProfile } from '@/app/actions'
 
+const INITIATING_DEPARTMENTS = ['Wire Line Planning', 'Fixed Network', 'Engineering']
+const AUTHORIZED_ROLES = ['INITIATOR', 'REQUESTER']
+
+function NewRequestButton({ userProfile }: { userProfile: { department: string | null; role: string | null; email?: string | null } | null }) {
+  const isAuthorizedDept = !!userProfile?.department && INITIATING_DEPARTMENTS.includes(userProfile.department)
+  const isAuthorizedRole = !!userProfile?.role && AUTHORIZED_ROLES.includes(userProfile.role)
+  const canInitiate = isAuthorizedDept || isAuthorizedRole
+
+  if (!canInitiate) {
+    return (
+      <button
+        type="button"
+        disabled
+        title="Only authorized planning departments can initiate new requests."
+        className="rounded-lg bg-slate-100 px-6 py-2 text-sm font-medium text-slate-400 cursor-not-allowed border border-slate-200/60 dark:bg-zinc-800/50 dark:text-zinc-500 dark:border-zinc-700/50"
+      >
+        + New Request
+      </button>
+    )
+  }
+
+  return (
+    <Link
+      href="/create-request"
+      className="rounded-lg bg-teal-600 px-6 py-2 text-sm font-medium text-white hover:bg-teal-700 transition-colors"
+    >
+      + New Request
+    </Link>
+  )
+}
+
 export default function Dashboard() {
   const { data, loading, error, toast, updateStatus, calculateLagHours } = useChangeRequests()
   const [expandedId, setExpandedId] = useState<string | null>(null)
@@ -28,7 +59,10 @@ export default function Dashboard() {
     return (
       <div className="min-h-screen bg-slate-50/50 dark:bg-zinc-950" suppressHydrationWarning={true}>
         <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 lg:px-8">
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-zinc-50 sm:text-3xl">Project Approvals</h1>
+          <div className="flex items-center justify-between gap-4">
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-zinc-50 sm:text-3xl">Project Approvals</h1>
+            <NewRequestButton userProfile={userProfile} />
+          </div>
           <div className="mt-6 grid gap-4">
             {[...Array(3)].map((_, i) => (
               <div key={i} className="h-28 animate-pulse rounded-xl bg-slate-200 dark:bg-zinc-800" />
@@ -43,7 +77,10 @@ export default function Dashboard() {
     return (
       <div className="min-h-screen bg-slate-50/50 dark:bg-zinc-950" suppressHydrationWarning={true}>
         <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 lg:px-8">
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-zinc-50 sm:text-3xl">Project Approvals</h1>
+          <div className="flex items-center justify-between gap-4">
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-zinc-50 sm:text-3xl">Project Approvals</h1>
+            <NewRequestButton userProfile={userProfile} />
+          </div>
           <div className="mt-6 rounded-xl border border-rose-200 bg-rose-50 p-4 text-center text-rose-800 dark:bg-rose-950/20 dark:text-rose-400">
             Error: {error}
           </div>
@@ -62,36 +99,7 @@ export default function Dashboard() {
             <span className="rounded-full bg-slate-200/50 dark:bg-zinc-800/50 px-3 py-1 text-xs font-medium text-slate-700 dark:text-zinc-300">
               {data.length} {data.length === 1 ? 'request' : 'requests'}
             </span>
-            {(() => {
-              const initiatingDepartments = ['Wire Line Planning', 'Fixed Network', 'Engineering']
-              const isAuthorizedDept = userProfile?.department
-                ? initiatingDepartments.includes(userProfile.department)
-                : false
-              const isAuthorizedRole = userProfile?.role === 'INITIATOR' || userProfile?.role === 'REQUESTER'
-              const canInitiate = isAuthorizedDept || isAuthorizedRole
-
-              if (!canInitiate) {
-                return (
-                  <button
-                    type="button"
-                    disabled
-                    title="Only authorized planning departments can initiate new requests."
-                    className="rounded-lg bg-slate-100 px-6 py-2 text-sm font-medium text-slate-400 cursor-not-allowed border border-slate-200/80 dark:bg-zinc-800/50 dark:text-zinc-500 dark:border-zinc-700"
-                  >
-                    + New Request
-                  </button>
-                )
-              }
-
-              return (
-                <Link
-                  href="/create-request"
-                  className="rounded-lg bg-teal-600 px-6 py-2 text-sm font-medium text-white hover:bg-teal-700 transition-colors"
-                >
-                  + New Request
-                </Link>
-              )
-            })()}
+            <NewRequestButton userProfile={userProfile} />
           </div>
         </div>
 
