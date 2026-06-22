@@ -63,16 +63,19 @@ export default function Dashboard() {
               {data.length} {data.length === 1 ? 'request' : 'requests'}
             </span>
             {(() => {
-              const canInitiate =
-                userProfile?.role === 'INITIATOR' ||
-                (userProfile?.role === 'REQUESTER' && !!userProfile?.department)
+              const initiatingDepartments = ['Wire Line Planning', 'Fixed Network', 'Engineering']
+              const isAuthorizedDept = userProfile?.department
+                ? initiatingDepartments.includes(userProfile.department)
+                : false
+              const isAuthorizedRole = userProfile?.role === 'INITIATOR' || userProfile?.role === 'REQUESTER'
+              const canInitiate = isAuthorizedDept || isAuthorizedRole
 
               if (!canInitiate) {
                 return (
                   <button
                     type="button"
                     disabled
-                    title="Only users with an initiator role and an assigned department can create new requests"
+                    title="Only authorized planning departments can initiate new requests."
                     className="rounded-lg bg-slate-100 px-6 py-2 text-sm font-medium text-slate-400 cursor-not-allowed border border-slate-200/80 dark:bg-zinc-800/50 dark:text-zinc-500 dark:border-zinc-700"
                   >
                     + New Request
