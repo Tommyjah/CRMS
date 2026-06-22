@@ -31,7 +31,18 @@ type ApproverAssign = {
   engineering_approver: string
 }
 
-export default function CreateRequestForm() {
+type CreateRequestFormProps = {
+  userProfile: {
+    department: string | null
+    role: string | null
+    email?: string | null
+  } | null
+}
+
+const INITIATING_DEPARTMENTS = ['Wire Line Planning', 'Fixed Network', 'Engineering']
+const AUTHORIZED_ROLES = ['INITIATOR', 'REQUESTER']
+
+export default function CreateRequestForm({ userProfile }: CreateRequestFormProps) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -61,6 +72,10 @@ const [technicalSpec, setTechnicalSpec] = useState<TechnicalSpec>({
     wire_line_approver: '',
     engineering_approver: '',
   })
+
+  const isAuthorizedDept = !!userProfile?.department && INITIATING_DEPARTMENTS.includes(userProfile.department)
+  const isAuthorizedRole = !!userProfile?.role && AUTHORIZED_ROLES.includes(userProfile.role)
+  const canSubmit = isAuthorizedDept || isAuthorizedRole
 
   const addActivityRow = () => {
     setActivities((prev) => [
@@ -452,8 +467,13 @@ const [technicalSpec, setTechnicalSpec] = useState<TechnicalSpec>({
 
               <button
                 type="submit"
-                disabled={loading}
-                className="rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-60 transition-colors"
+                disabled={loading || !canSubmit}
+                className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+                  canSubmit && !loading
+                    ? 'bg-teal-600 text-white hover:bg-teal-700'
+                    : 'bg-slate-100 text-slate-400 dark:bg-zinc-800/50 dark:text-zinc-500 cursor-not-allowed border border-slate-200/60 dark:border-zinc-700/50 hover:bg-slate-100'
+                }`}
+                title={!canSubmit ? 'Your account profile is not authorized to submit network change requests.' : undefined}
               >
                 {loading ? 'Submitting...' : 'Submit Change Request'}
               </button>
