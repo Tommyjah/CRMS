@@ -2,10 +2,14 @@
 
 import React, { useState } from 'react'
 import { ROLE_ACCESS } from '@/hooks/useChangeRequests'
+import { isStatus, STATUS_STYLES } from '@/lib/constants'
 import ChangeRequestDrawer from '@/components/ChangeRequestDrawer'
+import type { Database } from '@/types_db'
+
+type ChangeRequest = Database['public']['Tables']['change_requests']['Row']
 
 interface ChangeRequestCardProps {
-  request: any
+  request: ChangeRequest
   userProfile: {
     department: string | null
     role: string | null
@@ -19,6 +23,7 @@ export function ChangeRequestCard({ request, userProfile, onApprove, onReject }:
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
 
   const statusConfig = ROLE_ACCESS[request?.status ?? ''] ?? ROLE_ACCESS.DRAFT
+  const resolvedStatus = isStatus(request?.status) ? request.status : 'DRAFT'
 
   const projectNumber = request?.project_number ?? '—'
   const initiator = request?.initiated_by ?? '—'
@@ -37,6 +42,8 @@ export function ChangeRequestCard({ request, userProfile, onApprove, onReject }:
 
   const isButtonActive = !!statusConfig?.canApprove && (isTargetApprover || isAssignedApprover)
 
+  const statusStyle = STATUS_STYLES[resolvedStatus]
+
   return (
     <div className="rounded-xl border border-slate-200/80 bg-white shadow-sm dark:border-zinc-800/80 dark:bg-zinc-900">
       <div className="grid grid-cols-1 gap-6 p-4 md:grid-cols-12 md:p-5">
@@ -50,13 +57,7 @@ export function ChangeRequestCard({ request, userProfile, onApprove, onReject }:
             </p>
           </div>
           <span
-            className={`shrink-0 px-2.5 py-1 text-xs font-semibold rounded-full ${
-              request?.status === 'APPROVED'
-                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-800/50'
-                : request?.status === 'REJECTED'
-                  ? 'bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/20 dark:text-rose-400 dark:border-rose-800/50'
-                  : 'bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/20 dark:text-amber-400 dark:border-amber-800/50'
-            }`}
+            className={`shrink-0 px-2.5 py-1 text-xs font-semibold rounded-full ${statusStyle}`}
           >
             {statusConfig?.label || request?.status?.replace('_', ' ') || 'PENDING'}
           </span>

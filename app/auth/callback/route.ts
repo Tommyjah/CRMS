@@ -9,7 +9,7 @@ export async function GET(request: Request) {
 
   if (code) {
     const cookieStore = await cookies()
-    
+
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -29,31 +29,33 @@ export async function GET(request: Request) {
         },
       }
     )
-    
+
     const { data, error } = await supabase.auth.exchangeCodeForSession(code)
-    
+
     if (!error && data?.user) {
-// 🔥 Ensure profile exists for OAuth users - auto upsert on first login
-       if (data.user) {
-         // Always update department to null for OAuth users needing onboarding
-         await supabase
-           .from('profiles')
-           .upsert({
-             id: data.user.id,
-             email: data.user.email ?? '',
-             full_name: data.user.user_metadata?.full_name ?? '',
-             department: null,
-             role: 'REQUESTER',
-             created_at: new Date().toISOString(),
-             updated_at: new Date().toISOString(),
-             is_active: true,
-           }, {
-             onConflict: 'id',
-           })
-       }
-      
-      return NextResponse.redirect(`${origin}${next}`)
+      const { data: existingProfile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', data.user.id)
+        .maybeSingle()
+
+      if (!existingProfile) {
+        await supabase
+          .from('profiles')
+          .insert({
+            id: data.user.id,
+            email: data.user.email ?? '',
+            full_name: data.user.user_metadata?.full_name ?? '',
+            department: null,
+            role: 'REQUESTER',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            is_active: true,
+          })
+      }
     }
+
+    return NextResponse.redirect(`${origin}${next}`)
   }
 
   return NextResponse.redirect(`${origin}/login?error=Could not authenticate user`)

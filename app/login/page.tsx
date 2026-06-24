@@ -6,7 +6,8 @@ import { createClientBrowser } from '@/lib/supabase/client'
 import { useChangeRequests } from '@/hooks/useChangeRequests'
 import OnboardingModal from '@/components/OnboardingModal'
 import { ChangeRequestCard } from '@/components/ChangeRequestCard'
-import { getUserProfile, updateUserProfile } from '@/app/actions'
+import { getUserProfile } from '@/app/actions'
+import type { Session } from '@supabase/supabase-js'
 import type { Database } from '@/types_db'
 
 type AuthMode = 'login' | 'signup'
@@ -15,7 +16,7 @@ export default function UnifiedPage() {
   const router = useRouter()
   const supabase = createClientBrowser()
 
-  const [session, setSession] = useState<any>(null)
+  const [session, setSession] = useState<Session | null>(null)
   const [checkingAuth, setCheckingAuth] = useState(true)
   const [userProfile, setUserProfile] = useState<Database['public']['Tables']['profiles']['Row'] | null>(null)
   const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null)
@@ -33,10 +34,10 @@ export default function UnifiedPage() {
     async function initializeAuth() {
       const { data: { session: activeSession } } = await supabase.auth.getSession()
       setSession(activeSession)
-      
+
       if (activeSession) {
         const response = await getUserProfile()
-        if (response.data) setUserProfile(response.data as Database['public']['Tables']['profiles']['Row'])
+        if (response.data) setUserProfile(response.data)
         setCurrentUserEmail(activeSession.user.email ?? null)
       }
       setCheckingAuth(false)
@@ -48,7 +49,7 @@ export default function UnifiedPage() {
       setSession(currentSession)
       if (currentSession) {
         const response = await getUserProfile()
-        if (response.data) setUserProfile(response.data as Database['public']['Tables']['profiles']['Row'])
+        if (response.data) setUserProfile(response.data)
         setCurrentUserEmail(currentSession.user.email ?? null)
       } else {
         setUserProfile(null)
@@ -88,7 +89,6 @@ export default function UnifiedPage() {
           return
         }
 
-        // 🔥 Create profile for email/password signup - sync with OAuth flow
         if (data.user) {
           const { error: profileError } = await supabase
             .from('profiles')
@@ -186,7 +186,7 @@ export default function UnifiedPage() {
                   <label className="block text-sm font-medium text-slate-700 dark:text-zinc-300">Department</label>
                   <select
                     value={department}
-                    onChange={(e) => setDepartment(e.target.value)}
+                    onChange={(e) => setDepartment(e.target.value as string)}
                     className="mt-1 w-full rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-100 px-3 py-2 text-sm focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 dark:focus:ring-teal-500/10 transition-all outline-none"
                   >
                     <option value="Initiator">Initiator</option>
@@ -262,7 +262,7 @@ export default function UnifiedPage() {
     )
   }
 
-return (
+  return (
     <div className="min-h-screen w-full bg-slate-50/50 dark:bg-zinc-950 text-slate-900 dark:text-zinc-50 transition-colors duration-200">
       <OnboardingModal />
       <header className="border-b border-slate-200/80 dark:border-zinc-800/80 pb-4 flex justify-between items-center max-w-5xl mx-auto px-4 pt-6">
@@ -304,7 +304,7 @@ return (
               <ChangeRequestCard
                 key={ticket.id}
                 request={ticket}
-                userProfile={{...userProfile, email: currentUserEmail} as any}
+                userProfile={userProfile ? { ...userProfile, email: currentUserEmail } : null}
                 onApprove={approve}
                 onReject={reject}
               />

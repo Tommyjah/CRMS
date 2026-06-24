@@ -1,5 +1,6 @@
 // lib/generatePdf.ts
 import { jsPDF } from 'jspdf'
+import { REQUEST_STATUSES, STATUS_PDF_COLORS } from './constants'
 
 export interface RequestData {
   id: string
@@ -82,9 +83,12 @@ export async function generatePdf(request: RequestData, activities: Activity[]) 
     doc.setFont('helvetica', 'bold')
     
     // Status Context Colorizer
-    if (request.status === 'APPROVED') doc.setTextColor(46, 125, 50)       
-    else if (request.status === 'REJECTED') doc.setTextColor(198, 40, 40)   
-    else doc.setTextColor(216, 133, 21)                                    
+    const [r, g, b] = request.status === REQUEST_STATUSES[4]
+      ? STATUS_PDF_COLORS.APPROVED
+      : request.status === REQUEST_STATUSES[5]
+        ? STATUS_PDF_COLORS.REJECTED
+        : STATUS_PDF_COLORS.PENDING_DEPT_1
+    doc.setTextColor(r, g, b)                                    
     
     doc.text(request.status || 'PENDING', rightColX + 26, 45)
     doc.setTextColor(0, 0, 0) // Reset back to clean black text color
@@ -168,7 +172,7 @@ export async function generatePdf(request: RequestData, activities: Activity[]) 
         doc.text('Prepared By: ___________________________', margin, footerY)
         doc.text('Approved By: ___________________________', rightColX, footerY)
       }
-    } as any)
+    })
 
     // Save final document download trigger
     const cleanName = (request.project_name || 'report').replace(/[^a-z0-9]/gi, '_').toLowerCase()

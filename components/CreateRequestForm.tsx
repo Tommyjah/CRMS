@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createChangeRequest } from '@/app/actions'
+import { DEPARTMENTS, PRIORITY_LEVELS } from '@/lib/constants'
 
 type ActivityRow = {
   id: string
@@ -70,7 +71,7 @@ const [technicalSpec, setTechnicalSpec] = useState<TechnicalSpec>({
     engineering_approver: '',
   })
 
-  const canSubmit = userProfile?.department === 'Initiator'
+  const canSubmit = userProfile?.department === DEPARTMENTS[0]
 
   const addActivityRow = () => {
     setActivities((prev) => [
@@ -189,10 +190,9 @@ const [technicalSpec, setTechnicalSpec] = useState<TechnicalSpec>({
                     required
                     className="w-full rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-100 px-3 py-2 text-sm focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 dark:focus:ring-teal-500/10 transition-all outline-none"
                   >
-                    <option value="Low">Low</option>
-                    <option value="Medium">Medium</option>
-                    <option value="High">High</option>
-                    <option value="Critical">Critical</option>
+                    {PRIORITY_LEVELS.map((p) => (
+                      <option key={p} value={p}>{p}</option>
+                    ))}
                   </select>
                 </label>
 

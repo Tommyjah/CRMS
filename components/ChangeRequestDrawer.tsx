@@ -1,9 +1,11 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import type { ChangeRequest } from '@/lib/supabase/client'
+import { STAGE_STEPS, STAGE_LABELS, APPROVER_FIELD, isStatus } from '@/lib/constants'
 
 interface ChangeRequestDrawerProps {
-  request: any
+  request: ChangeRequest | null
   isOpen: boolean
   onClose: () => void
 }
@@ -88,7 +90,7 @@ return (
                         <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
                           request?.status === 'APPROVED' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-400' :
                           request?.status === 'REJECTED' ? 'bg-rose-100 text-rose-800 dark:bg-rose-950/30 dark:text-rose-400' :
-                          request?.status?.startsWith('PENDING') ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/30 dark:text-amber-400' :
+                          isStatus(request?.status) && request.status.startsWith('PENDING') ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/30 dark:text-amber-400' :
                           'bg-slate-100 text-slate-800 dark:bg-zinc-800/50 dark:text-zinc-300'
                         }`}>
                           {request?.status?.replace(/_/g, ' ') || '—'}
@@ -162,7 +164,7 @@ return (
                   <h3 className="text-sm font-semibold text-slate-900 dark:text-zinc-100">Approval Progress Tracker</h3>
                   <div className="rounded-lg border border-slate-200/80 dark:border-zinc-800/80 bg-slate-50/30 dark:bg-zinc-800/20 p-4">
                     <ol className="relative ml-4 space-y-6 border-l border-slate-300 dark:border-zinc-700">
-                      {(['DRAFT', 'PENDING_DEPT_1', 'PENDING_DEPT_2', 'PENDING_DEPT_3', 'APPROVED'] as const).map((stage, idx) => {
+                      {STAGE_STEPS.map((stage, idx) => {
                         const isActive = request?.status === stage
                         const isComplete = stage === 'DRAFT' || (request?.status === 'APPROVED' && stage === 'APPROVED') || (request?.status !== 'APPROVED' && stage !== request?.status && stage !== 'APPROVED')
                         return (
@@ -176,17 +178,16 @@ return (
                             </div>
                             <div className="ml-6">
                               <p className={`text-sm font-medium ${isActive ? 'text-teal-900 dark:text-teal-300' : isComplete ? 'text-emerald-900 dark:text-emerald-300' : 'text-slate-500 dark:text-zinc-400'}`}>
-                                {stage === 'DRAFT' ? 'Initiator' : stage === 'PENDING_DEPT_1' ? 'Fixed Network Review' : stage === 'PENDING_DEPT_2' ? 'Wire Line Planning Review' : stage === 'PENDING_DEPT_3' ? 'Engineering Review' : 'Approved'}
+                                {STAGE_LABELS[stage]}
                               </p>
-                              {stage === 'PENDING_DEPT_1' && (
-                                <p className="text-xs font-mono text-teal-600 dark:text-teal-400 mt-0.5">{request?.fixed_network_approver || 'Unassigned'}</p>
-                              )}
-                              {stage === 'PENDING_DEPT_2' && (
-                                <p className="text-xs font-mono text-teal-600 dark:text-teal-400 mt-0.5">{request?.wire_line_approver || 'Unassigned'}</p>
-                              )}
-                              {stage === 'PENDING_DEPT_3' && (
-                                <p className="text-xs font-mono text-teal-600 dark:text-teal-400 mt-0.5">{request?.engineering_approver || 'Unassigned'}</p>
-                              )}
+                              {(() => {
+                                const approverField = APPROVER_FIELD[stage]
+                                return approverField ? (
+                                  <p className="text-xs font-mono text-teal-600 dark:text-teal-400 mt-0.5">
+                                    {request?.[approverField] || 'Unassigned'}
+                                  </p>
+                                ) : null
+                              })()}
                             </div>
                           </li>
                         )

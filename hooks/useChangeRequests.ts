@@ -1,9 +1,9 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { supabase } from '@/lib/supabase/client'
 import type { ChangeRequest } from '@/lib/supabase/client'
-import { updateRequestStatus } from '@/app/actions' // 🔥 Connects to your sequential server action engine
+import { updateRequestStatus, getFilteredChangeRequests, type RequestFilters } from '@/app/actions'
 
 export type RequestWithAudit = ChangeRequest
 
@@ -34,22 +34,18 @@ export const ROLE_ACCESS: Record<
   REJECTED: { department: null, canApprove: false, locked: true, label: 'Rejected' },
 }
 
-export const DEPARTMENTS = ['Initiator', 'Fixed Network', 'Wire Line Planning', 'Engineering']
-
 function calculateLagHours(request: RequestWithAudit): number {
   const baseTime = request.created_at ? new Date(request.created_at).getTime() : Date.now()
-
-  return (
-    (Date.now() - baseTime) /
-    (1000 * 60 * 60)
-  )
+  return (Date.now() - baseTime) / (1000 * 60 * 60)
 }
 
-export function useChangeRequests() {
+export function useChangeRequests(filters?: RequestFilters) {
   const [data, setData] = useState<RequestWithAudit[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [toast, setToast] = useState<string | null>(null)
+  const [totalCount, setTotalCount] = useState(0)
+  const [totalPages, setTotalPages] = useState(0)
   const pendingApprovals = useRef<Set<string>>(new Set())
 
   const showToast = (message: string) => {
@@ -57,83 +53,94 @@ export function useChangeRequests() {
     setTimeout(() => setToast(null), 4000)
   }
 
-  // 1. Clean, unfiltered select query leveraging global Option B visibility rules
-  const fetchRequests = async () => {
+  const fetchRequests = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
-      const { data: dbData, error: dbError } = await supabase
-        .from('change_requests')
-        .select('*')
-        .order('created_at', { ascending: false })
+      if (filters) {
+        const params = { ...filters, page: filters.page ?? 1 }
+        const result = await getFilteredChangeRequests(params)
+        if (result?.error) {
+          setError(result.error)
+          setData([])
+          setTotalCount(0)
+          setTotalPages(0)
+        } else {
+          setData(result.data)
+          setTotalCount(result.totalCount)
+          setTotalPages(result.totalPages)
+        }
+      } else {
+        const { data: dbData, error: dbError } = await supabase
+          .from('change_requests')
+          .select('*', { count: 'exact' })
+          .order('created_at', { ascending: false })
 
-      if (dbError) throw dbError
-      
-      // FIX: Changed from setRequests to the actual state setter setData
-      setData((dbData as RequestWithAudit[]) || [])
+        if (dbError) throw dbError
+        setData((dbData as ChangeRequest[]) || [])
+        setTotalCount(dbData?.length ?? 0)
+        setTotalPages(0)
+      }
     } catch (err) {
       console.error('[useChangeRequests] Error fetching requests:', err)
       setError(err instanceof Error ? err.message : 'Failed to load requests')
     } finally {
       setLoading(false)
     }
-  }
+  }, [filters])
 
-  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
+    // Data fetching pattern: intentionally triggers state updates on mount/dependency change.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchRequests()
-  }, [])
+  }, [fetchRequests])
 
-  // 2. Upgraded to call the secure sequential approval pipeline backend action
   const approve = async (id: string) => {
     if (pendingApprovals.current.has(id)) return
-
     const request = data.find((r) => r.id === id)
     if (!request) return
-
     const access = ROLE_ACCESS[request.status ?? '']
     if (!access?.canApprove) {
       showToast('This request cannot be approved from its current status')
       return
     }
-
     pendingApprovals.current.add(id)
-
     try {
-      // Direct call to your sequential state engine action
       const result = await updateRequestStatus(id, 'APPROVE')
-
-      if (result.error) {
+      if (result?.error) {
         setError(result.error)
         showToast(result.error)
       } else {
-        showToast('Request advanced to the next stage successfully')
-        await fetchRequests() // Fresh pull of updated global statuses
+        showToast('Request approved and advanced to the next stage')
+        await fetchRequests()
       }
     } catch (err) {
       console.error('[useChangeRequests] Approval error:', err)
-      setError('An unexpected error occurred during approval.')
+      const message = err instanceof Error ? err.message : 'An unexpected error occurred during approval.'
+      setError(message)
+      showToast(message)
     } finally {
       pendingApprovals.current.delete(id)
     }
   }
 
-  // 3. Optional: Added clear pipeline rejection handler
   const reject = async (id: string) => {
     if (pendingApprovals.current.has(id)) return
     pendingApprovals.current.add(id)
-
     try {
       const result = await updateRequestStatus(id, 'REJECT')
-      if (result.error) {
+      if (result?.error) {
         setError(result.error)
         showToast(result.error)
       } else {
-        showToast('Request rejected successfully.')
+        showToast('Request rejected successfully')
         await fetchRequests()
       }
     } catch (err) {
       console.error('[useChangeRequests] Rejection error:', err)
+      const message = err instanceof Error ? err.message : 'An unexpected error occurred during rejection.'
+      setError(message)
+      showToast(message)
     } finally {
       pendingApprovals.current.delete(id)
     }
@@ -143,18 +150,14 @@ export function useChangeRequests() {
     id: string,
     updates: { status?: string | null },
   ) => {
-    // Only allow DRAFT status edits for non-approvers
-    // For approvals, use the approve() function which handles department checks
     if (updates.status && updates.status !== 'DRAFT') {
       showToast('Use the Approve button to advance requests through the workflow')
       return
     }
-
     const previous = data
     setData((prev) =>
       prev.map((req) => (req.id === id ? { ...req, ...updates } : req)),
     )
-
     const { error: dbError } = await supabase
       .from('change_requests')
       .update(updates)
@@ -175,9 +178,11 @@ export function useChangeRequests() {
     loading,
     error,
     toast,
+    totalCount,
+    totalPages,
     refetch: fetchRequests,
     approve,
-    reject, // Exposed for interface button bindings
+    reject,
     updateStatus,
     calculateLagHours: (request: RequestWithAudit) =>
       calculateLagHours(request),

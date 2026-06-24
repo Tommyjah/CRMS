@@ -13,8 +13,14 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "CRMS",
-  description: "Change Request Management System",
+  title: {
+    default: "CRMS — Change Request Management",
+    template: "%s | CRMS",
+  },
+  description: "Professional change request management system for tracking and approving project changes.",
+  icons: {
+    icon: "/favicon.ico",
+  },
 };
 
 export default function RootLayout({
@@ -26,6 +32,7 @@ export default function RootLayout({
     <html
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      suppressHydrationWarning={true}
     >
       <body className="min-h-full flex flex-col bg-slate-50/50 text-slate-900 dark:bg-zinc-950 dark:text-zinc-100 transition-colors duration-200" suppressHydrationWarning={true}>
         {children}

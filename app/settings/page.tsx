@@ -3,15 +3,23 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
+import { updateUserProfile } from '@/app/actions'
+import { DEPARTMENTS, resolveInitiatorRole } from '@/lib/constants'
 
 export default function SettingsPage() {
   const router = useRouter()
   const [email, setEmail] = useState('')
   const [department, setDepartment] = useState('')
+  const [fullName, setFullName] = useState('')
+  const [role, setRole] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [signOutLoading, setSignOutLoading] = useState(false)
+  const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [message, setMessage] = useState<string | null>(null)
   const [theme, setTheme] = useState<'light' | 'dark'>('light')
+
+  const canEditDepartment = role === 'APPROVER' || role === 'ADMIN'
 
   useEffect(() => {
     const loadPreferences = async () => {
@@ -29,11 +37,13 @@ export default function SettingsPage() {
       if (user) {
         const { data: profile } = await supabase
           .from('profiles')
-          .select('department')
+          .select('department, full_name, role')
           .eq('id', user.id)
-          .single()
-        if (profile?.department) {
-          setDepartment(profile.department)
+          .maybeSingle()
+        if (profile) {
+          setDepartment(profile.department ?? '')
+          setFullName(profile.full_name ?? '')
+          setRole(profile.role ?? null)
         }
       }
 
@@ -60,6 +70,22 @@ export default function SettingsPage() {
       setError(err instanceof Error ? err.message : 'Failed to sign out')
     }
     setSignOutLoading(false)
+  }
+
+  const handleProfileUpdate = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setSaving(true)
+    setError(null)
+    setMessage(null)
+
+    const { error } = await updateUserProfile(department, fullName)
+
+    if (error) {
+      setError(error)
+    } else {
+      setMessage('Profile updated successfully')
+    }
+    setSaving(false)
   }
 
   if (loading) {
@@ -95,8 +121,13 @@ export default function SettingsPage() {
             {error}
           </div>
         )}
+        {message && (
+          <div className="mt-4 rounded-lg bg-emerald-50 p-4 text-sm text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-400">
+            {message}
+          </div>
+        )}
 
-        <div className="mt-6 space-y-6">
+        <form onSubmit={handleProfileUpdate} className="mt-6 space-y-6">
           <div className="rounded-xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 p-6 shadow-sm">
             <h2 className="text-lg font-semibold text-slate-900 dark:text-zinc-100">Account Information</h2>
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
@@ -105,9 +136,63 @@ export default function SettingsPage() {
                 <p className="text-sm font-medium text-slate-900 dark:text-zinc-100">{email || '—'}</p>
               </div>
               <div>
-                <span className="text-sm text-slate-500 dark:text-zinc-400">Department</span>
-                <p className="text-sm font-medium text-slate-900 dark:text-zinc-100">{department || '—'}</p>
+                <label htmlFor="fullName" className="block text-sm font-medium text-slate-700 dark:text-zinc-300">
+                  Full Name
+                </label>
+                <input
+                  id="fullName"
+                  type="text"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  className="mt-1 w-full rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2 text-sm text-slate-900 dark:text-zinc-100 focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 dark:focus:ring-teal-500/10 transition-all outline-none"
+                />
               </div>
+              <div>
+                <label htmlFor="department" className="block text-sm font-medium text-slate-700 dark:text-zinc-300">
+                  Department
+                </label>
+                {canEditDepartment ? (
+                  <select
+                    id="department"
+                    value={department}
+                    onChange={(e) => setDepartment(e.target.value)}
+                    className="mt-1 w-full rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2 text-sm text-slate-900 dark:text-zinc-100 focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 dark:focus:ring-teal-500/10 transition-all outline-none"
+                  >
+                    <option value="">Select a department</option>
+                    {DEPARTMENTS.map((dept) => (
+                      <option key={dept} value={dept}>{dept}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <p className="mt-1 text-sm font-medium text-slate-900 dark:text-zinc-100">{department || '—'}</p>
+                )}
+                {!canEditDepartment && (
+                  <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
+                    Department change is restricted. Contact admin if needed.
+                  </p>
+                )}
+                {canEditDepartment && (
+                  <p className="mt-1 text-xs text-slate-500 dark:text-zinc-500">
+                    Determines your review rights: Fixed Network, Wire Line Planning, and Engineering are approver departments. Initiator can create new requests.
+                  </p>
+                )}
+              </div>
+              <div>
+                <span className="text-sm text-slate-500 dark:text-zinc-400">Role</span>
+                <p className="text-sm font-medium text-slate-900 dark:text-zinc-100">
+                  {role ? resolveInitiatorRole(role) : '—'}
+                </p>
+                <p className="mt-0.5 text-xs text-slate-500 dark:text-zinc-500">Role is derived automatically from your department and cannot be changed directly.</p>
+              </div>
+            </div>
+            <div className="mt-4">
+              <button
+                type="submit"
+                disabled={saving}
+                className="rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-50 transition-colors"
+              >
+                {saving ? 'Saving…' : 'Save Changes'}
+              </button>
             </div>
           </div>
 
@@ -137,7 +222,7 @@ export default function SettingsPage() {
               </button>
             </div>
           </div>
-        </div>
+        </form>
       </div>
     </div>
   )

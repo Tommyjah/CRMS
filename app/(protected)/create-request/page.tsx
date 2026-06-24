@@ -1,12 +1,13 @@
 import CreateRequestForm from '@/components/CreateRequestForm'
 import { getUserProfile } from '@/app/actions'
 import Link from 'next/link'
+import { DEPARTMENTS } from '@/lib/constants'
 
 export default async function CreateRequestPage() {
   const { data: userProfile } = await getUserProfile()
   
     // Strict authorization: Only users in the 'Initiator' department can create requests
-  if (!userProfile || userProfile.department !== 'Initiator') {
+  if (!userProfile || userProfile.department !== DEPARTMENTS[0]) {
     return (
       <div className="min-h-screen bg-slate-50/50 dark:bg-zinc-950 flex items-center justify-center px-4">
         <div className="text-center p-8 max-w-md rounded-xl border border-rose-200/50 dark:border-rose-800/50 bg-white dark:bg-zinc-900 shadow-sm">

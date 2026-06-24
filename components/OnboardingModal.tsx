@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { getUserProfile, updateUserProfile } from '@/app/actions'
-
-const validDepartments = ['Initiator', 'Fixed Network', 'Wire Line Planning', 'Engineering']
+import { DEPARTMENTS } from '@/lib/constants'
 
 import type { Database } from '@/types_db'
 
@@ -86,7 +85,7 @@ export default function OnboardingModal() {
               className="mt-1 w-full rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-100 px-3 py-2 text-sm focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 dark:focus:ring-teal-500/10 transition-all outline-none"
             >
               <option value="">Select a department</option>
-              {validDepartments.map((dept) => (
+              {[...DEPARTMENTS].map((dept) => (
                 <option key={dept} value={dept}>{dept}</option>
               ))}
             </select>

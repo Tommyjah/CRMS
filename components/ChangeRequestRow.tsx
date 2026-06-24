@@ -1,11 +1,11 @@
 'use client'
 import { generatePdf, RequestData, Activity } from '@/lib/generatePdf';
-// 1. Add this import at the top
 import { supabase } from '@/lib/supabase/client';
 import { useState } from 'react'
 import type { ChangeRequest, RequestAuditLog } from '@/lib/supabase/client.ts'
 import type { RequestWithAudit } from '@/hooks/useChangeRequests'
 import { ROLE_ACCESS } from '@/hooks/useChangeRequests'
+import { STATUS_STYLES, STATUS_DOT_COLORS, STAGE_STEPS, STAGE_LABELS, isStatus } from '@/lib/constants'
 import StatusButtons from '@/components/StatusButtons'
 import ChangeRequestDrawer from '@/components/ChangeRequestDrawer'
 
@@ -30,25 +30,12 @@ type RequestActivityForPdf = {
 
 function StatusBadge({ status }: { status: string | null }) {
   const access = ROLE_ACCESS[status ?? ''] ?? ROLE_ACCESS.DRAFT
-  const styles: Record<string, string> = {
-    DRAFT: 'bg-slate-50 text-slate-700 border border-slate-200 dark:bg-zinc-800/50 dark:text-zinc-300 dark:border-zinc-700',
-    PENDING_DEPT_1: 'bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/20 dark:text-amber-400 dark:border-amber-800/50',
-    PENDING_DEPT_2: 'bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/20 dark:text-amber-400 dark:border-amber-800/50',
-    PENDING_DEPT_3: 'bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/20 dark:text-amber-400 dark:border-amber-800/50',
-    APPROVED: 'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-800/50',
-    REJECTED: 'bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/20 dark:text-rose-400 dark:border-rose-800/50',
-  }
-  const dotColors: Record<string, string> = {
-    DRAFT: 'bg-slate-400 dark:bg-zinc-500',
-    PENDING_DEPT_1: 'bg-amber-400 dark:bg-amber-400',
-    PENDING_DEPT_2: 'bg-amber-400 dark:bg-amber-400',
-    PENDING_DEPT_3: 'bg-amber-400 dark:bg-amber-400',
-    APPROVED: 'bg-emerald-400 dark:bg-emerald-400',
-    REJECTED: 'bg-rose-400 dark:bg-rose-400',
-  }
+  const resolvedStatus = isStatus(status) ? status : 'DRAFT'
+  const styles = STATUS_STYLES[resolvedStatus]
+  const dotColors = STATUS_DOT_COLORS[resolvedStatus]
   return (
-    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${styles[status ?? ''] ?? 'bg-slate-50 text-slate-700 border border-slate-200 dark:bg-zinc-800/50 dark:text-zinc-300 dark:border-zinc-700'}`}>
-      <span className={`h-1.5 w-1.5 rounded-full ${dotColors[status ?? ''] ?? 'bg-slate-400 dark:bg-zinc-500'}`} />
+    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${styles}`}>
+      <span className={`h-1.5 w-1.5 rounded-full ${dotColors}`} />
       {access?.label || 'UNKNOWN'}
     </span>
   )
@@ -65,16 +52,9 @@ function LagBadge({ hours }: { hours: number }) {
 }
 
 function DepartmentTimeline({ status, auditLogs }: { status: string | null; auditLogs: RequestAuditLog[] | undefined }) {
-  const steps = ['DRAFT', 'PENDING_DEPT_1', 'PENDING_DEPT_2', 'PENDING_DEPT_3', 'APPROVED']
+  const steps = STAGE_STEPS
   const completed = auditLogs?.map((entry) => entry.new_status).filter(Boolean) as string[] ?? []
-
-  const stageLabels: Record<string, string> = {
-    DRAFT: 'Initiator',
-    PENDING_DEPT_1: 'Fixed Network Review',
-    PENDING_DEPT_2: 'Wire Line Planning Review',
-    PENDING_DEPT_3: 'Engineering Review',
-    APPROVED: 'Approved',
-  }
+  const stageLabels = STAGE_LABELS
 
   return (
     <ol className="mt-4 space-y-2">
@@ -191,12 +171,15 @@ export default function ChangeRequestRow({
 
     setIsLoading(true)
     try {
-
- const { data } = await supabase
+      const { data, error } = await supabase
         .from('request_audit_log')
         .select('*')
         .eq('request_id', id)
         .order('timestamp', { ascending: false })
+
+      if (error) {
+        throw new Error(error.message || 'Failed to load audit history')
+      }
 
       setAuditLogs(data ?? [])
     } catch (err) {
@@ -213,14 +196,10 @@ export default function ChangeRequestRow({
     try {
       const { data: activities, error } = await getRequestActivities(req.id)
 
-      // 👇 ADD THIS TEMPORARY DEBUG LOG
-      console.log("PDF Debug - Request ID:", req.id, "Fetched Activities:", activities);
-      
       if (error) {
         throw new Error(error)
       }
 
-      // 1. Explicitly apply the RequestData type definition
       const requestForPdf: RequestData = {
         id: req.id,
         project_name: req.project_name ?? '—',
@@ -234,16 +213,14 @@ export default function ChangeRequestRow({
 
       const typedActivities = (activities ?? []) as RequestActivityForPdf[]
 
-      // 2. Map and cast data strictly to clear the types mismatch errors
       const activitiesForPdf: Activity[] = typedActivities.map((activity) => ({
         activity: activity.activity,
-        unit: activity.unit ?? '—',                       // Handle potential null
-        contract_qty: Number(activity.contract_qty) || 0, // Convert string/null to number
-        executed_qty: Number(activity.executed_qty) || 0, // Convert string/null to number
-        reason: activity.reason ?? '—',                   // Handle potential null
+        unit: activity.unit ?? '—',
+        contract_qty: Number(activity.contract_qty) || 0,
+        executed_qty: Number(activity.executed_qty) || 0,
+        reason: activity.reason ?? '—',
       }))
 
-      // 3. Added 'await' here since generatePdf is an async function
       await generatePdf(requestForPdf, activitiesForPdf)
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to generate PDF'
@@ -253,81 +230,92 @@ export default function ChangeRequestRow({
       setIsGeneratingPdf(false)
     }
   }
-  
-  const statusOptions = [
-    { value: 'PENDING_DEPT_1', label: 'Fixed Network Review' },
-    { value: 'PENDING_DEPT_2', label: 'Wire Line Planning Review' },
-    { value: 'PENDING_DEPT_3', label: 'Engineering Review' },
-    { value: 'APPROVED', label: 'Approved' },
-    { value: 'REJECTED', label: 'Rejected' },
-  ]
 
   return (
     <>
-      <div className={`rounded-xl border bg-white shadow-sm transition-all duration-200 hover:shadow-md hover:border-teal-500/30 dark:bg-zinc-900 dark:border-zinc-800/80 ${stale ? 'border-rose-300' : 'border-slate-200/80'}`} suppressHydrationWarning={true}>
-        <div className="grid grid-cols-1 gap-6 p-4 md:grid-cols-12 md:p-5">
-        <div className="md:col-span-12 flex flex-wrap items-center gap-2">
-          <h2 className="truncate text-lg font-bold text-slate-900 dark:text-zinc-100">{req.project_name}</h2>
+      <div className={`group rounded-xl border bg-white shadow-sm transition-all duration-200 hover:shadow-md hover:border-teal-500/30 dark:bg-zinc-900 dark:border-zinc-800/80 ${stale ? 'border-rose-300 dark:border-rose-800/50' : 'border-slate-200/80'}`} suppressHydrationWarning={true}>
+        <div className="grid grid-cols-1 gap-5 p-5 md:grid-cols-12 md:p-6">
+        <div className="md:col-span-12 flex flex-wrap items-center gap-3">
+          <h2 className="truncate text-base font-bold text-slate-900 dark:text-zinc-100 group-hover:text-teal-700 dark:group-hover:text-teal-400 transition-colors">
+            {req.project_name}
+          </h2>
           <StatusBadge status={req.status} />
           <LagBadge hours={lagHours} />
         </div>
 
         <div className="md:col-span-5 text-sm text-slate-600 dark:text-zinc-300">
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            <div>
-              <span className="font-medium text-slate-500 dark:text-zinc-400">Project Number:</span>{' '}
-              {projectNumber}
+          <dl className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+            <div className="rounded-lg bg-slate-50/60 dark:bg-zinc-800/40 px-3 py-2">
+              <dt className="text-xs font-medium text-slate-500 dark:text-zinc-400">Project Number</dt>
+              <dd className="mt-0.5 font-mono text-xs text-slate-900 dark:text-zinc-100">{projectNumber}</dd>
             </div>
-            <div>
-              <span className="font-medium text-slate-500 dark:text-zinc-400">Initiated By:</span>{' '}
-              {initiator ?? '—'}
+            <div className="rounded-lg bg-slate-50/60 dark:bg-zinc-800/40 px-3 py-2">
+              <dt className="text-xs font-medium text-slate-500 dark:text-zinc-400">Initiated By</dt>
+              <dd className="mt-0.5 text-xs text-slate-900 dark:text-zinc-100">{initiator ?? '—'}</dd>
             </div>
-            <div>
-              <span className="font-medium text-slate-500 dark:text-zinc-400">Priority Level:</span>{' '}
-              {priority}
+            <div className="rounded-lg bg-slate-50/60 dark:bg-zinc-800/40 px-3 py-2">
+              <dt className="text-xs font-medium text-slate-500 dark:text-zinc-400">Priority</dt>
+              <dd className="mt-0.5 text-xs text-slate-900 dark:text-zinc-100">{priority}</dd>
             </div>
-            <div>
-              <span className="font-medium text-slate-500 dark:text-zinc-400">Current holder:</span>{' '}
-              {access.department || '—'}
+            <div className="rounded-lg bg-slate-50/60 dark:bg-zinc-800/40 px-3 py-2">
+              <dt className="text-xs font-medium text-slate-500 dark:text-zinc-400">Current Stage</dt>
+              <dd className="mt-0.5 text-xs text-slate-900 dark:text-zinc-100">{access.department || '—'}</dd>
             </div>
+          </dl>
+        </div>
+
+        <div className="md:col-span-7 text-sm text-slate-700 dark:text-zinc-300">
+          <div className="rounded-lg border border-slate-200/80 dark:border-zinc-800/80 bg-slate-50/50 dark:bg-zinc-800/30 p-3.5">
+            {description && (
+              <>
+                <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-zinc-400 mb-1.5">
+                  Change Description
+                </p>
+                <p className="text-sm text-slate-700 dark:text-zinc-200 line-clamp-3">{description}</p>
+              </>
+            )}
           </div>
         </div>
 
-        <div className="md:col-span-7 text-sm text-slate-700 dark:text-zinc-300 bg-slate-50/50 dark:bg-zinc-800/30 p-3 rounded-lg border border-slate-200/80 dark:border-zinc-800/80">
-          {description && (
-            <>
-              <p className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-zinc-400">
-                Change Description
-              </p>
-              <p className="mt-1 text-slate-700 dark:text-zinc-200">{description}</p>
-            </>
-          )}
-        </div>
-
         <div className="md:col-span-12 flex flex-wrap items-center gap-2">
-          <time className="mr-auto text-xs text-slate-500 dark:text-zinc-500">Created {formatDate(req.created_at)}</time>
+          <time className="mr-auto text-xs text-slate-500 dark:text-zinc-500">
+            Created {formatDate(req.created_at)}
+          </time>
           <button
             type="button"
             onClick={() => toggleAuditLog(req.id)}
             disabled={isLoading}
-            className="rounded-lg border border-slate-300 dark:border-zinc-700 px-3 py-2 text-sm font-medium text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800 disabled:opacity-50 transition-colors"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 dark:border-zinc-700 px-3 py-1.5 text-xs font-medium text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800 disabled:opacity-50 transition-colors"
           >
-            {isLoading ? 'Loading...' : expandedId === req.id ? 'Hide audit log' : 'View audit log'}
+            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            {isLoading ? 'Loading...' : expandedId === req.id ? 'Hide audit log' : 'Audit log'}
           </button>
           <button
             type="button"
             onClick={handleDownloadPdf}
             disabled={isGeneratingPdf}
-            className="rounded-lg border border-slate-300 dark:border-zinc-700 px-3 py-2 text-sm font-medium text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800 disabled:opacity-50 transition-colors"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 dark:border-zinc-700 px-3 py-1.5 text-xs font-medium text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800 disabled:opacity-50 transition-colors"
           >
-            {isGeneratingPdf ? 'Generating...' : 'Download PDF'}
+            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+            </svg>
+            {isGeneratingPdf ? 'Generating...' : 'PDF'}
           </button>
+          {pdfError && (
+            <span className="text-xs text-rose-600 dark:text-rose-400 self-center">{pdfError}</span>
+          )}
           <button
             type="button"
             onClick={() => setIsDrawerOpen(true)}
-            className="rounded-lg border border-slate-300 dark:border-zinc-700 px-3 py-2 text-sm font-medium text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 dark:border-zinc-700 px-3 py-1.5 text-xs font-medium text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors"
           >
-            🔍 Details
+            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            Details
           </button>
           <StatusButtons
             requestId={req.id}
@@ -339,24 +327,27 @@ export default function ChangeRequestRow({
       </div>
 
       {pdfError && (
-        <div className="mx-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800 dark:bg-rose-950/20 dark:text-rose-400">
+        <div className="mx-5 mb-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-xs text-rose-800 dark:bg-rose-950/20 dark:text-rose-400">
           {pdfError}
         </div>
       )}
 
-      <div className="border-t border-slate-200/50 dark:border-zinc-800 px-4 pb-4">
-        <h3 className="mb-2 text-sm font-semibold text-slate-900 dark:text-zinc-100">Approval Timeline</h3>
+      <div className="border-t border-slate-200/50 dark:border-zinc-800 px-5 pb-5">
+        <h3 className="mb-3 text-xs font-semibold text-slate-900 dark:text-zinc-100 uppercase tracking-wider">Approval Timeline</h3>
         <DepartmentTimeline status={req.status} auditLogs={auditLogs ?? undefined} />
         {expandedId === req.id && (
           <div className="mt-4">
-            <h3 className="mb-2 text-sm font-semibold text-slate-900 dark:text-zinc-100">Audit History</h3>
+            <h3 className="mb-3 text-xs font-semibold text-slate-900 dark:text-zinc-100 uppercase tracking-wider">Audit History</h3>
             <AuditTimeline logs={auditLogs ?? undefined} />
           </div>
         )}
       </div>
     </div>
-
-    <ChangeRequestDrawer request={req} isOpen={isDrawerOpen} onClose={() => setIsDrawerOpen(false)} />
+      <ChangeRequestDrawer
+        request={req}
+        isOpen={isDrawerOpen}
+        onClose={() => setIsDrawerOpen(false)}
+      />
     </>
   )
 }
