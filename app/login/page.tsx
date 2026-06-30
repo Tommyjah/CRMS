@@ -7,6 +7,7 @@ import { useChangeRequests } from '@/hooks/useChangeRequests'
 import OnboardingModal from '@/components/OnboardingModal'
 import { ChangeRequestCard } from '@/components/ChangeRequestCard'
 import { getUserProfile } from '@/app/actions'
+import { resolveInitiatorRole } from '@/lib/constants'
 import type { Session } from '@supabase/supabase-js'
 import type { Database } from '@/types_db'
 
@@ -90,6 +91,7 @@ export default function UnifiedPage() {
         }
 
         if (data.user) {
+          const derivedRole = resolveInitiatorRole(department)
           const { error: profileError } = await supabase
             .from('profiles')
             .upsert({
@@ -97,7 +99,7 @@ export default function UnifiedPage() {
               email: data.user.email ?? '',
               full_name: fullName,
               department,
-              role: 'REQUESTER',
+              role: derivedRole,
               created_at: new Date().toISOString(),
               updated_at: new Date().toISOString(),
               is_active: true,

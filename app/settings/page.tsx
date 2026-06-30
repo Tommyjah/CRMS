@@ -4,22 +4,21 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { updateUserProfile } from '@/app/actions'
-import { DEPARTMENTS, resolveInitiatorRole } from '@/lib/constants'
+
+const EDITABLE_ROLES = ['REQUESTER', 'APPROVER'] as const
 
 export default function SettingsPage() {
   const router = useRouter()
   const [email, setEmail] = useState('')
   const [department, setDepartment] = useState('')
   const [fullName, setFullName] = useState('')
-  const [role, setRole] = useState<string | null>(null)
+  const [role, setRole] = useState<string>('')
   const [loading, setLoading] = useState(true)
   const [signOutLoading, setSignOutLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
   const [theme, setTheme] = useState<'light' | 'dark'>('light')
-
-  const canEditDepartment = role === 'APPROVER' || role === 'ADMIN'
 
   useEffect(() => {
     const loadPreferences = async () => {
@@ -43,7 +42,7 @@ export default function SettingsPage() {
         if (profile) {
           setDepartment(profile.department ?? '')
           setFullName(profile.full_name ?? '')
-          setRole(profile.role ?? null)
+          setRole(profile.role ?? 'REQUESTER')
         }
       }
 
@@ -78,7 +77,7 @@ export default function SettingsPage() {
     setError(null)
     setMessage(null)
 
-    const { error } = await updateUserProfile(department, fullName)
+    const { error } = await updateUserProfile(department, fullName, role)
 
     if (error) {
       setError(error)
@@ -151,38 +150,28 @@ export default function SettingsPage() {
                 <label htmlFor="department" className="block text-sm font-medium text-slate-700 dark:text-zinc-300">
                   Department
                 </label>
-                {canEditDepartment ? (
-                  <select
-                    id="department"
-                    value={department}
-                    onChange={(e) => setDepartment(e.target.value)}
-                    className="mt-1 w-full rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2 text-sm text-slate-900 dark:text-zinc-100 focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 dark:focus:ring-teal-500/10 transition-all outline-none"
-                  >
-                    <option value="">Select a department</option>
-                    {DEPARTMENTS.map((dept) => (
-                      <option key={dept} value={dept}>{dept}</option>
-                    ))}
-                  </select>
-                ) : (
-                  <p className="mt-1 text-sm font-medium text-slate-900 dark:text-zinc-100">{department || '—'}</p>
-                )}
-                {!canEditDepartment && (
-                  <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
-                    Department change is restricted. Contact admin if needed.
-                  </p>
-                )}
-                {canEditDepartment && (
-                  <p className="mt-1 text-xs text-slate-500 dark:text-zinc-500">
-                    Determines your review rights: Fixed Network, Wire Line Planning, and Engineering are approver departments. Initiator can create new requests.
-                  </p>
-                )}
+                <p className="mt-1 text-sm font-medium text-slate-900 dark:text-zinc-100">{department || '—'}</p>
+                <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
+                  Department is set during onboarding and cannot be changed.
+                </p>
               </div>
               <div>
-                <span className="text-sm text-slate-500 dark:text-zinc-400">Role</span>
-                <p className="text-sm font-medium text-slate-900 dark:text-zinc-100">
-                  {role ? resolveInitiatorRole(role) : '—'}
+                <label htmlFor="role" className="block text-sm font-medium text-slate-700 dark:text-zinc-300">
+                  Role
+                </label>
+                <select
+                  id="role"
+                  value={role}
+                  onChange={(e) => setRole(e.target.value)}
+                  className="mt-1 w-full rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2 text-sm text-slate-900 dark:text-zinc-100 focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 dark:focus:ring-teal-500/10 transition-all outline-none"
+                >
+                  {EDITABLE_ROLES.map((r) => (
+                    <option key={r} value={r}>{r}</option>
+                  ))}
+                </select>
+                <p className="mt-0.5 text-xs text-slate-500 dark:text-zinc-500">
+                  REQUESTER can create requests. APPROVER can approve in their department stage.
                 </p>
-                <p className="mt-0.5 text-xs text-slate-500 dark:text-zinc-500">Role is derived automatically from your department and cannot be changed directly.</p>
               </div>
             </div>
             <div className="mt-4">

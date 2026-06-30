@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createChangeRequest } from '@/app/actions'
-import { DEPARTMENTS, PRIORITY_LEVELS } from '@/lib/constants'
+import { PRIORITY_LEVELS } from '@/lib/constants'
 
 type ActivityRow = {
   id: string
@@ -70,8 +70,6 @@ const [technicalSpec, setTechnicalSpec] = useState<TechnicalSpec>({
     wire_line_approver: '',
     engineering_approver: '',
   })
-
-  const canSubmit = userProfile?.department === DEPARTMENTS[0]
 
   const addActivityRow = () => {
     setActivities((prev) => [
@@ -462,13 +460,12 @@ const [technicalSpec, setTechnicalSpec] = useState<TechnicalSpec>({
 
               <button
                 type="submit"
-                disabled={loading || !canSubmit}
+                disabled={loading}
                 className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
-                  canSubmit && !loading
+                  !loading
                     ? 'bg-teal-600 text-white hover:bg-teal-700'
                     : 'bg-slate-100 text-slate-400 dark:bg-zinc-800/50 dark:text-zinc-500 cursor-not-allowed border border-slate-200/60 dark:border-zinc-700/50 hover:bg-slate-100'
                 }`}
-                title={!canSubmit ? 'Only users in the Initiator department can submit new requests.' : undefined}
               >
                 {loading ? 'Submitting...' : 'Submit Change Request'}
               </button>

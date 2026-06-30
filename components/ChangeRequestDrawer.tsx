@@ -160,41 +160,40 @@ return (
                   </div>
                 </section>
 
-                <section className="space-y-4">
-                  <h3 className="text-sm font-semibold text-slate-900 dark:text-zinc-100">Approval Progress Tracker</h3>
-                  <div className="rounded-lg border border-slate-200/80 dark:border-zinc-800/80 bg-slate-50/30 dark:bg-zinc-800/20 p-4">
-                    <ol className="relative ml-4 space-y-6 border-l border-slate-300 dark:border-zinc-700">
-                      {STAGE_STEPS.map((stage, idx) => {
-                        const isActive = request?.status === stage
-                        const isComplete = stage === 'DRAFT' || (request?.status === 'APPROVED' && stage === 'APPROVED') || (request?.status !== 'APPROVED' && stage !== request?.status && stage !== 'APPROVED')
-                        return (
-                          <li key={stage} className="relative">
-                            <div className={`absolute -left-5 flex h-8 w-8 items-center justify-center rounded-full border-2 ${
-                              isActive ? 'border-teal-600 bg-teal-600 ring-4 ring-teal-500/20 animate-pulse' : isComplete ? 'border-emerald-600 bg-emerald-600' : 'border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-900'
-                            }`}>
-                              <span className={`text-xs font-medium ${isActive || isComplete ? 'text-white' : 'text-slate-500 dark:text-zinc-400'}`}>
-                                {idx + 1}
-                              </span>
-                            </div>
-                            <div className="ml-6">
-                              <p className={`text-sm font-medium ${isActive ? 'text-teal-900 dark:text-teal-300' : isComplete ? 'text-emerald-900 dark:text-emerald-300' : 'text-slate-500 dark:text-zinc-400'}`}>
-                                {STAGE_LABELS[stage]}
-                              </p>
-                              {(() => {
-                                const approverField = APPROVER_FIELD[stage]
-                                return approverField ? (
-                                  <p className="text-xs font-mono text-teal-600 dark:text-teal-400 mt-0.5">
-                                    {request?.[approverField] || 'Unassigned'}
-                                  </p>
-                                ) : null
-                              })()}
-                            </div>
-                          </li>
-                        )
-                      })}
-                    </ol>
-                  </div>
-                </section>
+                 <section className="space-y-4">
+                   <h3 className="text-sm font-semibold text-slate-900 dark:text-zinc-100">Approval Progress Tracker</h3>
+                   <div className="rounded-lg border border-slate-200/80 dark:border-zinc-800/80 bg-slate-50/30 dark:bg-zinc-800/20 p-4">
+                     <ol className="relative ml-4 space-y-6 border-l border-slate-300 dark:border-zinc-700">
+                       {STAGE_STEPS.map((stage, idx) => {
+                         const isActive = request?.status === stage
+                         const isComplete = stage === 'DRAFT' || (request?.status === 'APPROVED' && stage === 'APPROVED') || (request?.status !== 'APPROVED' && stage !== request?.status && stage !== 'APPROVED')
+                         const approverField = APPROVER_FIELD[stage]
+                         const approverName = approverField ? (request as Record<string, string | null | undefined>)?.[approverField] : null
+                         return (
+                           <li key={stage} className="relative">
+                             <div className={`absolute -left-5 flex h-8 w-8 items-center justify-center rounded-full border-2 ${
+                               isActive ? 'border-teal-600 bg-teal-600 ring-4 ring-teal-500/20 animate-pulse' : isComplete ? 'border-emerald-600 bg-emerald-600' : 'border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-900'
+                             }`}>
+                               <span className={`text-xs font-medium ${isActive || isComplete ? 'text-white' : 'text-slate-500 dark:text-zinc-400'}`}>
+                                 {idx + 1}
+                               </span>
+                             </div>
+                             <div className="ml-6">
+                               <p className={`text-sm font-medium ${isActive ? 'text-teal-900 dark:text-teal-300' : isComplete ? 'text-emerald-900 dark:text-emerald-300' : 'text-slate-500 dark:text-zinc-400'}`}>
+                                 {STAGE_LABELS[stage]}
+                               </p>
+                               {approverField && (
+                                 <p className={`text-xs mt-0.5 ${approverName ? 'text-teal-600 dark:text-teal-400 font-medium' : 'text-slate-400 dark:text-zinc-500 italic'}`}>
+                                   {approverName ? `Assigned: ${approverName}` : 'Unassigned'}
+                                 </p>
+                               )}
+                             </div>
+                           </li>
+                         )
+                       })}
+                     </ol>
+                   </div>
+                 </section>
               </div>
             </div>
 

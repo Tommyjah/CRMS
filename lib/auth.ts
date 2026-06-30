@@ -5,6 +5,7 @@
  */
 import { createClient } from '@/lib/supabase/server'
 import type { Database } from '@/types_db'
+import type { SupabaseClient } from '@supabase/supabase-js'
 
 export type AuthResult = 
   | { user: { id: string; email?: string | null } | null; profile: (Database['public']['Tables']['profiles']['Row']) | null; error: null }
@@ -32,19 +33,36 @@ async function withAuthRetry<T>(fn: () => Promise<T>): Promise<T> {
   throw lastError
 }
 
+async function getUserWithRetry(
+  supabase: SupabaseClient<Database>,
+  maxAttempts: number = 2,
+): Promise<{ user: { id: string; email?: string | null } | null; error: string | null }> {
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const { data: { user }, error: userError } = await supabase.auth.getUser()
+    if (!userError && user) {
+      return { user, error: null }
+    }
+    if (attempt < maxAttempts - 1) {
+      await new Promise(resolve => setTimeout(resolve, 250))
+    }
+  }
+  const finalError = 'Auth session missing or expired'
+  return { user: null, error: finalError }
+}
+
+export { getUserWithRetry }
+
 /**
  * Fetches the currently authenticated user and their profile in one call.
  * Returns a uniform shape suitable for all server actions.
  */
 export async function getCurrentProfile(): Promise<AuthResult> {
   const supabase = await createClient()
-  
-  const { data: { user }, error: userError } = await withAuthRetry(() =>
-    supabase.auth.getUser()
-  )
+
+  const { user, error: userError } = await getUserWithRetry(supabase, 2)
 
   if (userError || !user) {
-    return { user: null, profile: null, error: userError?.message ?? 'Not authenticated' }
+    return { user: null, profile: null, error: userError ?? 'Not authenticated' }
   }
 
   const { data: profile } = await supabase

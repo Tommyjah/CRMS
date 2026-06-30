@@ -128,7 +128,6 @@ export const STATUS_PDF_COLORS: Record<Status, [number, number, number]> = {
 }
 
 export function resolveInitiatorRole(department: string): 'INITIATOR' | 'REQUESTER' | 'APPROVER' {
-  if (department === 'Initiator') return 'INITIATOR'
   if (department === 'Fixed Network' || department === 'Wire Line Planning' || department === 'Engineering') return 'APPROVER'
   return 'REQUESTER'
 }

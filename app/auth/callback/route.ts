@@ -1,6 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
+import { resolveInitiatorRole } from '@/lib/constants'
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
@@ -40,14 +41,16 @@ export async function GET(request: Request) {
         .maybeSingle()
 
       if (!existingProfile) {
+        const department = data.user.user_metadata?.department ?? null
+        const derivedRole = department ? resolveInitiatorRole(department) : 'REQUESTER'
         await supabase
           .from('profiles')
           .insert({
             id: data.user.id,
             email: data.user.email ?? '',
             full_name: data.user.user_metadata?.full_name ?? '',
-            department: null,
-            role: 'REQUESTER',
+            department,
+            role: derivedRole,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
             is_active: true,

@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { isDepartmentResponsible } from '@/lib/security-constants'
 import { REQUEST_STATUSES, PRIORITY_LEVELS, isStatus, isPriority, isRole, isDepartment } from '@/lib/constants'
-import { getCurrentProfile, resolveInitiatorRole } from '@/lib/auth'
+import { getCurrentProfile, getUserWithRetry, resolveInitiatorRole } from '@/lib/auth'
 import type { ChangeRequest } from '@/lib/supabase/client'
 import type { Database } from '@/types_db'
 
@@ -56,6 +56,7 @@ type CreateChangeRequestInput = {
 /**
  * Security Model:
  * - ALL authenticated users can SELECT * FROM change_requests (full transparency)
+ * - ALL authenticated users can create new requests
  * - ONLY the responsible department for the current status can APPROVE
  * - ANY APPROVER role can REJECT (immediate pipeline stop with accountability)
  * - RLS policies in supabase/migrations/0002_rls_change_requests.sql enforce DB-level security
@@ -63,7 +64,7 @@ type CreateChangeRequestInput = {
 
 /**
  * Creates a new change request with validated form data.
- * Only users with INITIATOR or REQUESTER role can create requests.
+ * Any authenticated user can create requests.
  */
 export async function createChangeRequest(
   formData: FormData,
@@ -73,9 +74,6 @@ export async function createChangeRequest(
   const { profile, user, error: authError } = await getCurrentProfile()
   if (authError || !user || !profile) {
     return { success: false, error: authError ?? 'Not authenticated' }
-  }
-  if (profile.role !== 'INITIATOR' && profile.role !== 'REQUESTER') {
-    return { success: false, error: 'Access Denied: Only Initiators can create new requests.' }
   }
 
   const rawPriorityCandidate = formData.get('priority_level') ?? extraFields.priority_level
@@ -284,6 +282,8 @@ export async function updateRequestStatus(requestId: string, action: 'APPROVE' |
 /**
  * Fetches the current user's profile from the database.
  * Returns a default profile for users without an existing profile.
+ * Retries once with a short delay to handle timing issues between
+ * middleware auth and component render on initial page load.
  */
 export async function getUserProfile() {
   const { profile, error } = await getCurrentProfile()
@@ -294,11 +294,17 @@ export async function getUserProfile() {
 }
 
 /**
- * Updates current user's profile with validated department and optional full name.
+ * Updates current user's profile.
+ * - Department is locked after first setup (onboarding).
+ * - Role can be changed by the user (APPROVER / REQUESTER).
+ * - fullName can always be updated.
  */
-export async function updateUserProfile(department: string, fullName?: string) {
+export async function updateUserProfile(department: string, fullName?: string, role?: string) {
   if (!isDepartment(department as unknown)) {
     return { success: false, error: 'Invalid department' }
+  }
+  if (role !== undefined && !isRole(role as unknown)) {
+    return { success: false, error: 'Invalid role' }
   }
 
   const { profile, user, error: authError } = await getCurrentProfile()
@@ -306,12 +312,12 @@ export async function updateUserProfile(department: string, fullName?: string) {
     return { success: false, error: authError ?? 'Not authenticated' }
   }
 
-  const currentRole = profile.role
-  const isAllowedRole = currentRole === 'APPROVER' || currentRole === 'ADMIN'
-  const departmentChanged = department !== profile.department
+  const previousDepartment = profile.department
+  const isFirstTimeSetup = !previousDepartment || previousDepartment === ''
+  const departmentChanged = department !== previousDepartment
 
-  if (departmentChanged && !isAllowedRole) {
-    return { success: false, error: 'Department change is restricted. Contact admin if needed.' }
+  if (departmentChanged && !isFirstTimeSetup) {
+    return { success: false, error: 'Department is locked after onboarding and cannot be changed.' }
   }
 
   const resolvedName = typeof fullName === 'string' && fullName.length > 0
@@ -320,7 +326,7 @@ export async function updateUserProfile(department: string, fullName?: string) {
       ? profile.full_name
       : ''
 
-  const finalRole = departmentChanged ? resolveInitiatorRole(department) : currentRole
+  const finalRole = role ?? profile.role ?? resolveInitiatorRole(department)
 
   const supabase = await createClient()
   const { error } = await supabase

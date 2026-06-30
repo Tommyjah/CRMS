@@ -5,7 +5,7 @@ import { useState } from 'react'
 import type { ChangeRequest, RequestAuditLog } from '@/lib/supabase/client.ts'
 import type { RequestWithAudit } from '@/hooks/useChangeRequests'
 import { ROLE_ACCESS } from '@/hooks/useChangeRequests'
-import { STATUS_STYLES, STATUS_DOT_COLORS, STAGE_STEPS, STAGE_LABELS, isStatus } from '@/lib/constants'
+import { STATUS_STYLES, STATUS_DOT_COLORS, STAGE_STEPS, STAGE_LABELS, APPROVER_FIELD, isStatus } from '@/lib/constants'
 import StatusButtons from '@/components/StatusButtons'
 import ChangeRequestDrawer from '@/components/ChangeRequestDrawer'
 
@@ -51,7 +51,7 @@ function LagBadge({ hours }: { hours: number }) {
   )
 }
 
-function DepartmentTimeline({ status, auditLogs }: { status: string | null; auditLogs: RequestAuditLog[] | undefined }) {
+function DepartmentTimeline({ status, auditLogs, approvers }: { status: string | null; auditLogs: RequestAuditLog[] | undefined; approvers: { fixed_network_approver: string | null; wire_line_approver: string | null; engineering_approver: string | null } }) {
   const steps = STAGE_STEPS
   const completed = auditLogs?.map((entry) => entry.new_status).filter(Boolean) as string[] ?? []
   const stageLabels = STAGE_LABELS
@@ -61,6 +61,8 @@ function DepartmentTimeline({ status, auditLogs }: { status: string | null; audi
       {steps.map((step) => {
         const isComplete = completed.includes(step)
         const isCurrent = step === status
+        const approverField = APPROVER_FIELD[step] as keyof typeof approvers | undefined
+        const approverName = approverField ? approvers[approverField] : null
         return (
           <li key={step} className="flex items-center gap-2">
             <span
@@ -72,18 +74,25 @@ function DepartmentTimeline({ status, auditLogs }: { status: string | null; audi
                     : 'h-3 w-3 rounded-full border-2 border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-900'
               }
             />
-            <span
-              className={
-                isCurrent
-                  ? 'text-sm font-semibold text-teal-900 dark:text-teal-300'
-                  : isComplete
-                    ? 'text-sm font-medium text-emerald-800 dark:text-emerald-300'
-                    : 'text-sm text-slate-500 dark:text-zinc-400'
-              }
-            >
-              {stageLabels[step] || step}
-            </span>
-            {isCurrent && <span className="text-xs text-slate-500 dark:text-zinc-400">(current)</span>}
+            <div className="flex-1 min-w-0">
+              <span
+                className={
+                  isCurrent
+                    ? 'text-sm font-semibold text-teal-900 dark:text-teal-300'
+                    : isComplete
+                      ? 'text-sm font-medium text-emerald-800 dark:text-emerald-300'
+                      : 'text-sm text-slate-500 dark:text-zinc-400'
+                }
+              >
+                {stageLabels[step] || step}
+              </span>
+              {approverField && approverName && (
+                <span className="ml-2 text-xs text-teal-600 dark:text-teal-400 truncate">
+                  · {approverName}
+                </span>
+              )}
+            </div>
+            {isCurrent && <span className="text-xs text-slate-500 dark:text-zinc-400 shrink-0">(current)</span>}
           </li>
         )
       })}
@@ -334,7 +343,7 @@ export default function ChangeRequestRow({
 
       <div className="border-t border-slate-200/50 dark:border-zinc-800 px-5 pb-5">
         <h3 className="mb-3 text-xs font-semibold text-slate-900 dark:text-zinc-100 uppercase tracking-wider">Approval Timeline</h3>
-        <DepartmentTimeline status={req.status} auditLogs={auditLogs ?? undefined} />
+        <DepartmentTimeline status={req.status} auditLogs={auditLogs ?? undefined} approvers={{ fixed_network_approver: req.fixed_network_approver, wire_line_approver: req.wire_line_approver, engineering_approver: req.engineering_approver }} />
         {expandedId === req.id && (
           <div className="mt-4">
             <h3 className="mb-3 text-xs font-semibold text-slate-900 dark:text-zinc-100 uppercase tracking-wider">Audit History</h3>

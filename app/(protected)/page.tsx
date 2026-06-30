@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { useChangeRequests } from '@/hooks/useChangeRequests'
 import ChangeRequestRow from '@/components/ChangeRequestRow'
@@ -106,14 +106,15 @@ function PaginationControls({
 }
 
 function NewRequestButton({ userProfile }: { userProfile: { department: string | null; role: string | null; email?: string | null } | null }) {
-  const canInitiate = userProfile?.department === DEPARTMENTS[0]
+  const role = userProfile?.role
+  const canCreate = role === 'REQUESTER' || role === 'INITIATOR'
 
-  if (!canInitiate) {
+  if (!canCreate) {
     return (
       <button
         type="button"
         disabled
-        title="Only users in the Initiator department can create new requests."
+        title="Approvers cannot create new requests."
         className="inline-flex items-center gap-1.5 rounded-lg bg-slate-100 px-4 py-2 text-sm font-medium text-slate-400 cursor-not-allowed border border-slate-200/60 dark:bg-zinc-800/50 dark:text-zinc-500 dark:border-zinc-700/50"
       >
         <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
@@ -141,6 +142,8 @@ export default function Dashboard() {
   const [userProfile, setUserProfile] = useState<{ department: string | null; role: string | null; email?: string | null } | null>(null)
   const [profileLoading, setProfileLoading] = useState(true)
   const [profileError, setProfileError] = useState<string | null>(null)
+  const retryCountRef = useRef(0)
+  const hasShownLoadingRef = useRef(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('All')
   const [priorityFilter, setPriorityFilter] = useState('All')
@@ -150,13 +153,26 @@ export default function Dashboard() {
   const [page, setPage] = useState(1)
 
   const loadProfile = useCallback(async () => {
+    const isRetry = retryCountRef.current > 0
+    retryCountRef.current += 1
+
     setProfileLoading(true)
     setProfileError(null)
     try {
       const result = await getUserProfile()
       if (result.data) {
         setUserProfile(result.data)
+        retryCountRef.current = 0
       } else {
+        const authMissing = result.error?.toLowerCase().includes('session') || result.error?.toLowerCase().includes('auth')
+        if (!isRetry && authMissing) {
+          setProfileLoading(true)
+          setProfileError(null)
+          await new Promise(resolve => setTimeout(resolve, 350))
+          retryCountRef.current += 1
+          loadProfile()
+          return
+        }
         setProfileError(result.error ?? 'Failed to load profile')
       }
     } catch (err) {
@@ -398,9 +414,11 @@ export default function Dashboard() {
                   ))}
                 </select>
               </div>
+            </div>
 
-              <div>
-                <label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-zinc-300">
+            <div className="flex items-end gap-3">
+              <div className="flex flex-col gap-1.5">
+                <label className="block text-sm font-medium text-slate-700 dark:text-zinc-300">
                   Date Range
                 </label>
                 <div className="flex items-center gap-2">
@@ -408,14 +426,14 @@ export default function Dashboard() {
                     type="date"
                     value={dateFrom}
                     onChange={(e) => setDateFrom(e.target.value)}
-                    className="w-28 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-2.5 py-2 text-xs text-slate-900 dark:text-zinc-100 focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 dark:focus:ring-teal-500/10 transition-all outline-none"
+                    className="h-[38px] w-36 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-2.5 py-2 text-sm text-slate-900 dark:text-zinc-100 focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 dark:focus:ring-teal-500/10 transition-all outline-none"
                   />
-                  <span className="text-xs text-slate-400 dark:text-zinc-500">to</span>
+                  <span className="text-sm text-slate-400 dark:text-zinc-500 select-none shrink-0">to</span>
                   <input
                     type="date"
                     value={dateTo}
                     onChange={(e) => setDateTo(e.target.value)}
-                    className="w-28 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-2.5 py-2 text-xs text-slate-900 dark:text-zinc-100 focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 dark:focus:ring-teal-500/10 transition-all outline-none"
+                    className="h-[38px] w-36 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-2.5 py-2 text-sm text-slate-900 dark:text-zinc-100 focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 dark:focus:ring-teal-500/10 transition-all outline-none"
                   />
                 </div>
               </div>
