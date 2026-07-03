@@ -23,13 +23,16 @@ const FINAL_STATUSES: readonly string[] = ['APPROVED', 'REJECTED', 'DRAFT']
 export default function StatusButtons({ requestId, status, userProfile, onSuccess, onRejected, approverEmail }: StatusButtonsProps) {
   const [loading, setLoading] = useState(false)
   const [localError, setLocalError] = useState<string | null>(null)
+  const [showRejectReason, setShowRejectReason] = useState(false)
+  const [rejectReason, setRejectReason] = useState('')
 
   const handleStatusUpdate = useCallback(async (action: 'APPROVE' | 'REJECT') => {
     setLoading(true)
     setLocalError(null)
 
     try {
-      const result = await updateRequestStatus(requestId, action)
+      const comment = action === 'REJECT' ? rejectReason.trim() || null : undefined
+      const result = await updateRequestStatus(requestId, action, comment)
 
       if (result?.error) {
         setLocalError(result.error)
@@ -37,6 +40,8 @@ export default function StatusButtons({ requestId, status, userProfile, onSucces
       }
 
       if (action === 'REJECT') {
+        setShowRejectReason(false)
+        setRejectReason('')
         onRejected?.()
       }
 
@@ -46,7 +51,7 @@ export default function StatusButtons({ requestId, status, userProfile, onSucces
     } finally {
       setLoading(false)
     }
-  }, [requestId, onSuccess, onRejected])
+  }, [requestId, onSuccess, onRejected, rejectReason])
 
   if (FINAL_STATUSES.includes(status ?? '')) return null
 
@@ -82,7 +87,7 @@ export default function StatusButtons({ requestId, status, userProfile, onSucces
         </button>
         <button
           type="button"
-          onClick={() => handleStatusUpdate('REJECT')}
+          onClick={() => setShowRejectReason(prev => !prev)}
           disabled={loading || !canTakeAction}
           title={!canTakeAction ? 'You are not authorized to reject this request' : undefined}
           className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-all ${
@@ -97,6 +102,42 @@ export default function StatusButtons({ requestId, status, userProfile, onSucces
           Reject
         </button>
       </div>
+
+      {showRejectReason && (
+        <div className="rounded-lg border border-rose-200/80 dark:border-rose-900/60 bg-white dark:bg-zinc-900 p-3">
+          <label className="block text-xs font-medium text-slate-700 dark:text-zinc-300 mb-1">
+            Rejection Reason <span className="text-slate-400">(optional)</span>
+          </label>
+          <textarea
+            value={rejectReason}
+            onChange={(e) => setRejectReason(e.target.value)}
+            rows={3}
+            className="w-full rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-100 px-3 py-2 text-sm focus:border-rose-500 focus:ring-1 focus:ring-rose-500/20 outline-none"
+            placeholder="Enter reason for rejection..."
+          />
+          <div className="mt-2 flex items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setShowRejectReason(false)
+                setRejectReason('')
+              }}
+              className="rounded-lg border border-slate-300 dark:border-zinc-700 px-3 py-1.5 text-xs font-medium text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800/50 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={() => handleStatusUpdate('REJECT')}
+              disabled={loading}
+              className="rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-rose-700 transition-colors disabled:opacity-50"
+            >
+              {loading ? 'Submitting…' : 'Confirm Reject'}
+            </button>
+          </div>
+        </div>
+      )}
+
       {localError && (
         <span className="text-xs text-rose-600 dark:text-rose-400">{localError}</span>
       )}

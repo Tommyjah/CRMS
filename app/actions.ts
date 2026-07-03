@@ -242,7 +242,7 @@ export async function getRequestActivities(requestId: string) {
  * - Server-side checks provide second layer
  * Only APPROVER role can act; responsible department for current status can APPROVE; any approver can REJECT.
  */
-export async function updateRequestStatus(requestId: string, action: 'APPROVE' | 'REJECT') {
+export async function updateRequestStatus(requestId: string, action: 'APPROVE' | 'REJECT', comment?: string | null) {
   const supabase = await createClient()
 
   const { data: { user }, error: userError } = await supabase.auth.getUser()
@@ -333,14 +333,14 @@ const { error: updateError } = await supabase
      return { success: false, error: updateError.message }
    }
 
-   // Log the status change in audit log
-   await logRequestActivity(
-     requestId,
-     action === 'APPROVE' ? 'APPROVE' : 'REJECT',
-     currentStatus,
-     nextStatus,
-     null // No comment for status changes
-   )
+    // Log the status change in audit log
+    await logRequestActivity(
+      requestId,
+      action === 'APPROVE' ? 'APPROVE' : 'REJECT',
+      currentStatus,
+      nextStatus,
+      action === 'REJECT' ? comment ?? null : null
+    )
 
    revalidatePath('/')
    return { success: true, message: action === 'APPROVE' ? 'Request approved successfully' : 'Request rejected successfully' }

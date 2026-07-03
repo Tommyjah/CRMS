@@ -230,6 +230,12 @@ export default function ChangeRequestRow({
         fixed_network_approver: req.fixed_network_approver ?? '',
         wire_line_approver: req.wire_line_approver ?? '',
         engineering_approver: req.engineering_approver ?? '',
+        final_decision_by: req.status === 'APPROVED'
+          ? req.engineering_approver ?? req.wire_line_approver ?? req.fixed_network_approver ?? null
+          : req.status === 'REJECTED'
+            ? req.engineering_approver ?? req.wire_line_approver ?? req.fixed_network_approver ?? null
+            : null,
+        final_decision_reason: (auditLogs ?? []).find(log => log.new_status === 'REJECTED')?.comment ?? null,
       }
 
       const typedActivities = (activities ?? []) as RequestActivityForPdf[]
