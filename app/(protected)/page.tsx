@@ -143,17 +143,8 @@ export default function Dashboard() {
   const [profileLoading, setProfileLoading] = useState(true)
   const [profileError, setProfileError] = useState<string | null>(null)
   const retryCountRef = useRef(0)
-  const hasShownLoadingRef = useRef(false)
-  const [searchQuery, setSearchQuery] = useState('')
-  const [statusFilter, setStatusFilter] = useState('All')
-  const [priorityFilter, setPriorityFilter] = useState('All')
-  const [departmentFilter, setDepartmentFilter] = useState('All')
-  const [dateFrom, setDateFrom] = useState('')
-  const [dateTo, setDateTo] = useState('')
-  const [page, setPage] = useState(1)
 
   const loadProfile = useCallback(async () => {
-    const isRetry = retryCountRef.current > 0
     retryCountRef.current += 1
 
     setProfileLoading(true)
@@ -164,15 +155,6 @@ export default function Dashboard() {
         setUserProfile(result.data)
         retryCountRef.current = 0
       } else {
-        const authMissing = result.error?.toLowerCase().includes('session') || result.error?.toLowerCase().includes('auth')
-        if (!isRetry && authMissing) {
-          setProfileLoading(true)
-          setProfileError(null)
-          await new Promise(resolve => setTimeout(resolve, 350))
-          retryCountRef.current += 1
-          loadProfile()
-          return
-        }
         setProfileError(result.error ?? 'Failed to load profile')
       }
     } catch (err) {
@@ -184,9 +166,28 @@ export default function Dashboard() {
   }, [])
 
   useEffect(() => {
+    // Initial data load on mount - standard React pattern
     // eslint-disable-next-line react-hooks/set-state-in-effect
     loadProfile()
   }, [loadProfile])
+
+  useEffect(() => {
+    const shouldRetry = profileError?.toLowerCase().includes('session') || profileError?.toLowerCase().includes('auth')
+    if (shouldRetry && retryCountRef.current === 1) {
+      const timer = setTimeout(() => {
+        loadProfile()
+      }, 350)
+      return () => clearTimeout(timer)
+    }
+  }, [profileError, loadProfile])
+
+  const [searchQuery, setSearchQuery] = useState('')
+  const [statusFilter, setStatusFilter] = useState('All')
+  const [priorityFilter, setPriorityFilter] = useState('All')
+  const [departmentFilter, setDepartmentFilter] = useState('All')
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo] = useState('')
+  const [page, setPage] = useState(1)
 
   const filters: RequestFilters = useMemo(
     () => ({

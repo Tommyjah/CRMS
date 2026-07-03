@@ -159,7 +159,7 @@ export default function UnifiedPage() {
 
   if (!session) {
     return (
-      <div className="min-h-screen bg-slate-50/50 dark:bg-zinc-950 flex flex-col items-center justify-center px-4">
+      <div className="min-h-screen bg-slate-50/50 dark:bg-zinc-950 flex flex-col items-center justify-center px-4" suppressHydrationWarning={true}>
         <div className="w-full max-w-md rounded-xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 p-6 shadow-sm">
           <h1 className="text-2xl font-bold text-slate-900 dark:text-zinc-100">
             {authMode === 'login' ? 'Sign in to CRMS' : 'Create your account'}
@@ -170,7 +170,7 @@ export default function UnifiedPage() {
               : 'Register to submit and track change requests.'}
           </p>
 
-          <form onSubmit={handleAuthSubmit} className="mt-6 space-y-4">
+          <form onSubmit={handleAuthSubmit} className="mt-6 space-y-4" suppressHydrationWarning={true}>
             {authMode === 'signup' && (
               <>
                 <div>

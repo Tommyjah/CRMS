@@ -12,3 +12,8 @@ export type ChangeRequestInsert = Database['public']['Tables']['change_requests'
 export type ChangeRequestUpdate = Database['public']['Tables']['change_requests']['Update']
 export type RequestAuditLog = Database['public']['Tables']['request_audit_log']['Row']
 export type RequestAuditLogInsert = Database['public']['Tables']['request_audit_log']['Insert']
+export type RequestAuditLogUpdate = Database['public']['Tables']['request_audit_log']['Update']
+
+export type RequestAttachment = Database['public']['Tables']['request_attachments']['Row']
+export type RequestAttachmentInsert = Database['public']['Tables']['request_attachments']['Insert']
+export type RequestAttachmentUpdate = Database['public']['Tables']['request_attachments']['Update']

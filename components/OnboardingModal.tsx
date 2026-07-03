@@ -56,8 +56,8 @@ export default function OnboardingModal() {
   }
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4">
-      <div className="w-full max-w-md rounded-xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 p-6 shadow-lg">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4" suppressHydrationWarning={true}>
+      <div className="w-full max-w-md rounded-xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 p-6 shadow-lg" suppressHydrationWarning={true}>
         <h2 className="text-xl font-bold text-slate-900 dark:text-zinc-100">Complete Your Profile</h2>
         <p className="mt-2 text-sm text-slate-600 dark:text-zinc-400">
           Please provide your full name and select your department to continue using CRMS.

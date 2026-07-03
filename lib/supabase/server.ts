@@ -4,7 +4,6 @@ import type { Database } from '@/types_db'
 
 export async function createClient() {
   const cookieStore = await cookies()
-  const isLocalhost = process.env.NEXT_PUBLIC_SUPABASE_URL?.includes('localhost') ?? false
 
   return createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -15,12 +14,17 @@ export async function createClient() {
           return cookieStore.getAll()
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) => {
-            cookieStore.set(name, value, {
-              ...options,
-              secure: isLocalhost ? false : options.secure,
+          try {
+            const isLocalhost = process.env.NEXT_PUBLIC_SUPABASE_URL?.includes('localhost') ?? false
+            cookiesToSet.forEach(({ name, value, options }) => {
+              cookieStore.set(name, value, {
+                ...options,
+                secure: isLocalhost ? false : options.secure,
+              })
             })
-          })
+          } catch {
+            // Ignore cookie setting errors in some server action contexts
+          }
         },
       },
     }

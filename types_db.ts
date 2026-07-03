@@ -211,11 +211,72 @@ export type Database = {
           },
         ];
       };
+      request_attachments: {
+        Row: {
+          created_at: string | null;
+          description: string | null;
+          file_path: string;
+          file_size: number;
+          filename: string;
+          id: string;
+          mime_type: string;
+          original_filename: string;
+          request_id: string;
+          updated_at: string | null;
+          uploaded_by: string;
+          version_number: number;
+        };
+        Insert: {
+          created_at?: string | null;
+          description?: string | null;
+          file_path: string;
+          file_size?: number;
+          filename: string;
+          id?: string;
+          mime_type: string;
+          original_filename: string;
+          request_id: string;
+          updated_at?: string | null;
+          uploaded_by: string;
+          version_number?: number;
+        };
+        Update: {
+          created_at?: string | null;
+          description?: string | null;
+          file_path?: string;
+          file_size?: number;
+          filename?: string;
+          id?: string;
+          mime_type?: string;
+          original_filename?: string;
+          request_id?: string;
+          updated_at?: string | null;
+          uploaded_by?: string;
+          version_number?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "request_attachments_request_id_fkey";
+            columns: ["request_id"];
+            isOneToOne: false;
+            referencedRelation: "change_requests";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "request_attachments_uploaded_by_fkey";
+            columns: ["uploaded_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       request_audit_log: {
         Row: {
           action: string;
           changed_by: string;
           comment: string | null;
+          created_at: string | null;
           id: string;
           new_status: string | null;
           previous_status: string | null;
@@ -226,6 +287,7 @@ export type Database = {
           action: string;
           changed_by: string;
           comment?: string | null;
+          created_at?: string | null;
           id?: string;
           new_status?: string | null;
           previous_status?: string | null;
@@ -236,6 +298,7 @@ export type Database = {
           action?: string;
           changed_by?: string;
           comment?: string | null;
+          created_at?: string | null;
           id?: string;
           new_status?: string | null;
           previous_status?: string | null;

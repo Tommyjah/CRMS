@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createChangeRequest } from '@/app/actions'
 import { PRIORITY_LEVELS } from '@/lib/constants'
+import AttachmentUpload from './AttachmentUpload'
 
 type ActivityRow = {
   id: string
@@ -44,6 +45,9 @@ export default function CreateRequestForm({ userProfile }: CreateRequestFormProp
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState<string | null>(null)
+  const [createdRequestId, setCreatedRequestId] = useState<string | null>(null)
+  const [submitted, setSubmitted] = useState(false)
   const [activities, setActivities] = useState<ActivityRow[]>([
     {
       id: crypto.randomUUID(),
@@ -101,8 +105,10 @@ const [technicalSpec, setTechnicalSpec] = useState<TechnicalSpec>({
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
+    if (submitted || loading) return
     setLoading(true)
     setError(null)
+    setSuccess(null)
 
     const formData = new FormData(event.currentTarget)
 
@@ -125,10 +131,21 @@ const [technicalSpec, setTechnicalSpec] = useState<TechnicalSpec>({
     if (result?.error) {
       setError(result.error)
       setLoading(false)
-    } else {
-      router.push('/')
-      router.refresh()
+      setSubmitted(false)
+      return
     }
+
+    setSubmitted(true)
+    if (result?.requestId) {
+      setCreatedRequestId(result.requestId)
+    }
+    setSuccess('Change request created successfully. You can add attachments below.')
+    setLoading(false)
+  }
+
+  const handleDone = () => {
+    router.push('/')
+    router.refresh()
   }
 
   return (
@@ -449,27 +466,68 @@ const [technicalSpec, setTechnicalSpec] = useState<TechnicalSpec>({
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-3 border-t border-slate-200/50 dark:border-zinc-800 pt-6">
-              <button
-                type="button"
-                onClick={() => router.back()}
-                className="rounded-lg border border-slate-300 dark:border-zinc-700 px-4 py-2 text-sm font-medium text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800/50 transition-colors"
-              >
-                Cancel
-              </button>
+            {submitted && success && (
+              <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800 dark:bg-emerald-950/20 dark:text-emerald-300">
+                {success}
+                <div className="mt-3">
+                  <button
+                    type="button"
+                    onClick={handleDone}
+                    className="inline-flex items-center gap-1.5 rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-700 transition-colors"
+                  >
+                    Go to Dashboard
+                    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            )}
 
-              <button
-                type="submit"
-                disabled={loading}
-                className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
-                  !loading
-                    ? 'bg-teal-600 text-white hover:bg-teal-700'
-                    : 'bg-slate-100 text-slate-400 dark:bg-zinc-800/50 dark:text-zinc-500 cursor-not-allowed border border-slate-200/60 dark:border-zinc-700/50 hover:bg-slate-100'
-                }`}
-              >
-                {loading ? 'Submitting...' : 'Submit Change Request'}
-              </button>
-            </div>
+            {error && !submitted && (
+              <div className="rounded-lg border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800 dark:bg-rose-950/20 dark:text-rose-400">
+                {error}
+              </div>
+            )}
+
+            {createdRequestId && (
+              <div className="rounded-xl border border-[#00ab4e]/40 dark:border-emerald-900/60 bg-white dark:bg-zinc-900 p-5 shadow-sm">
+                <div className="flex items-center gap-2 mb-1">
+                  <svg className="h-5 w-5 text-[#00ab4e] dark:text-emerald-400" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M18.375 12.739l-1.063-1.063a4.5 4.5 0 00-6.364 0l-1.063 1.063M18.375 12.739l-1.063 1.063a4.5 4.5 0 01-6.364 0l-1.063-1.063M18.375 12.739V5.25m0 0L15.375 2.25m3 0v3.75m-7.5 7.5h9.75m-9.75 0H5.25" />
+                  </svg>
+                  <h2 className="text-lg font-semibold text-slate-900 dark:text-zinc-100">Attachments</h2>
+                </div>
+                <p className="text-xs text-slate-500 dark:text-zinc-400 mb-4">
+                  Attach supporting documents for this request. You can upload multiple files.
+                </p>
+                <AttachmentUpload key={createdRequestId} requestId={createdRequestId} />
+              </div>
+            )}
+
+            {!submitted && (
+              <div className="flex items-center justify-end gap-3 border-t border-slate-200/50 dark:border-zinc-800 pt-6">
+                <button
+                  type="button"
+                  onClick={() => router.back()}
+                  className="rounded-lg border border-slate-300 dark:border-zinc-700 px-4 py-2 text-sm font-medium text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800/50 transition-colors"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+                    !loading
+                      ? 'bg-teal-600 text-white hover:bg-teal-700'
+                      : 'bg-slate-100 text-slate-400 dark:bg-zinc-800/50 dark:text-zinc-500 cursor-not-allowed border border-slate-200/60 dark:border-zinc-700/50 hover:bg-slate-100'
+                  }`}
+                >
+                  {loading ? 'Submitting...' : 'Submit Change Request'}
+                </button>
+              </div>
+            )}
           </form>
         </div>
       </div>

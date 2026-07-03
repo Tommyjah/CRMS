@@ -48,22 +48,22 @@ function Navbar() {
   }
 
   return (
-    <nav className="border-b border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900">
-      <div className="mx-auto max-w-5xl px-4 py-3 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
+    <nav className="border-b border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900" suppressHydrationWarning={true}>
+      <div className="mx-auto max-w-5xl px-4 py-3 sm:px-6 lg:px-8" suppressHydrationWarning={true}>
+        <div className="flex items-center justify-between" suppressHydrationWarning={true}>
+          <div className="flex items-center gap-3" suppressHydrationWarning={true}>
           <button type="button" onClick={() => router.push('/')} className="text-lg font-semibold text-slate-900 dark:text-zinc-100">Ethio Telecom | CRMS</button>
           <span className="bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 text-xs font-medium px-2.5 py-0.5 rounded-full border border-slate-200/60">Enterprise Instance</span>
         </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3" suppressHydrationWarning={true}>
             {userProfile && (
               <div className="text-right text-xs bg-slate-100/50 dark:bg-zinc-800/50 px-2 py-1 rounded-lg border border-slate-200/80 dark:border-zinc-700/80 hidden sm:block">
                 <span className="block font-semibold text-slate-700 dark:text-zinc-300">Logged in as:</span>
                 <span className="text-slate-600 dark:text-zinc-400">{userProfile.department || 'No Department'} ({userProfile.role})</span>
               </div>
             )}
-            <div className="hidden gap-6 sm:flex">
+            <div className="hidden gap-6 sm:flex" suppressHydrationWarning={true}>
               <NavLink
                 href="/"
                 label="Dashboard"

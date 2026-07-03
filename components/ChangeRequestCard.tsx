@@ -45,7 +45,7 @@ export function ChangeRequestCard({ request, userProfile, onApprove, onReject }:
   const statusStyle = STATUS_STYLES[resolvedStatus]
 
   return (
-    <div className="rounded-xl border border-slate-200/80 bg-white shadow-sm dark:border-zinc-800/80 dark:bg-zinc-900">
+    <div className="rounded-xl border border-slate-200/80 bg-white shadow-sm dark:border-zinc-800/80 dark:bg-zinc-900" suppressHydrationWarning={true}>
       <div className="grid grid-cols-1 gap-6 p-4 md:grid-cols-12 md:p-5">
         <div className="md:col-span-12 flex flex-wrap items-center justify-between gap-3">
           <div className="min-w-0">

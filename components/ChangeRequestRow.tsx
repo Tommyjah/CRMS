@@ -1,7 +1,8 @@
 'use client'
 import { generatePdf, RequestData, Activity } from '@/lib/generatePdf';
 import { supabase } from '@/lib/supabase/client';
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import type { ChangeRequest, RequestAuditLog } from '@/lib/supabase/client.ts'
 import type { RequestWithAudit } from '@/hooks/useChangeRequests'
 import { ROLE_ACCESS } from '@/hooks/useChangeRequests'
@@ -100,43 +101,13 @@ function DepartmentTimeline({ status, auditLogs, approvers }: { status: string |
   )
 }
 
-function AuditTimeline({ logs }: { logs: RequestAuditLog[] | undefined }) {
-  if (!logs?.length) {
-    return <p className="text-sm text-slate-500 dark:text-zinc-400 mt-2">No audit history available.</p>
-  }
-
-  return (
-    <ol className="relative mt-3 space-y-3 border-l border-slate-300/50 dark:border-zinc-700/50 pl-4">
-      {logs
-        .slice()
-        .sort((a, b) => new Date(b.timestamp ?? 0).getTime() - new Date(a.timestamp ?? 0).getTime())
-        .map((log) => (
-          <li key={log.id} className="relative">
-            <div className="absolute -left-[21px] mt-1.5 h-3 w-3 rounded-full border-2 border-white bg-slate-400 dark:bg-zinc-500 shadow-sm" />
-            <div className="rounded-lg border border-slate-200/80 dark:border-zinc-800/80 bg-slate-50/30 dark:bg-zinc-800/20 p-3 shadow-sm">
-              <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-zinc-400">
-                <span className="font-medium">{new Date(log.timestamp ?? '').toLocaleString()}</span>
-                <span className="rounded bg-slate-200/50 dark:bg-zinc-700/50 px-1.5 py-0.5 font-mono">{log.action}</span>
-                <span>by {log.changed_by}</span>
-              </div>
-              {(log.previous_status || log.new_status) && (
-                <div className="mt-1 text-xs text-slate-600 dark:text-zinc-400">
-                  <span className="rounded bg-slate-200/50 dark:bg-zinc-700/50 px-1.5 py-0.5 font-mono">{log.previous_status ?? 'null'}</span>
-                  <span className="mx-1">→</span>
-                  <span className="rounded bg-slate-200/50 dark:bg-zinc-700/50 px-1.5 py-0.5 font-mono">{log.new_status ?? 'null'}</span>
-                </div>
-              )}
-              {log.comment && <p className="mt-1 text-xs text-slate-600 dark:text-zinc-400">{log.comment}</p>}
-            </div>
-          </li>
-        ))}
-    </ol>
-  )
-}
-
 function formatDate(value: string | null | undefined) {
   if (!value) return '—'
-  return new Date(value).toLocaleString()
+  try {
+    return new Date(value).toLocaleString('en-US')
+  } catch {
+    return '—'
+  }
 }
 
 type ChangeRequestRowProps = {
@@ -159,44 +130,73 @@ export default function ChangeRequestRow({
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false)
   const [pdfError, setPdfError] = useState<string | null>(null)
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
+  const [lagHours, setLagHours] = useState<number>(0)
 
   const access = ROLE_ACCESS[req.status ?? ''] ?? ROLE_ACCESS.DRAFT
   
-  const lagHours = calculateLagHours(req)
+  // Calculate lag hours only on client after mount to avoid hydration mismatch
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setLagHours(calculateLagHours(req))
+  }, [req.id])
+
   const stale = lagHours > 48
   const projectNumber = req.project_number ?? '—'
   const initiator = req.initiated_by ?? req.initiator_name
   const description = req.change_description ?? req.description
   const priority = req.priority_level ?? '—'
 
-  const toggleAuditLog = async (id: string) => {
-    if (expandedId === id) {
-      setExpandedId(null)
-      return
-    }
-
-    setExpandedId(id)
-    if (auditLogs) return
-
-    setIsLoading(true)
-    try {
-      const { data, error } = await supabase
-        .from('request_audit_log')
-        .select('*')
-        .eq('request_id', id)
-        .order('timestamp', { ascending: false })
-
-      if (error) {
-        throw new Error(error.message || 'Failed to load audit history')
+  useEffect(() => {
+    let isMounted = true;
+  
+    const fetchAuditLogs = async () => {
+      if (!req.id) return;
+  
+      setIsLoading(true);
+  
+      try {
+        // Check authentication first
+        const { data: { user } } = await supabase.auth.getUser();
+  
+        if (!user) {
+          console.warn('User not authenticated - skipping audit log fetch');
+          if (isMounted) setAuditLogs([]);
+          return;
+        }
+  
+        const { data, error } = await supabase
+          .from('request_audit_log')
+          .select('*')
+          .eq('request_id', req.id)
+          .order('timestamp', { ascending: false });   // or 'created_at' if you prefer
+  
+        if (!isMounted) return;
+  
+        if (error) {
+          console.error('Failed to fetch audit logs:', error);
+          setAuditLogs([]);
+        } else {
+          setAuditLogs(data ?? []);
+        }
+      } catch (err) {
+        if (isMounted) {
+          console.error('Failed to fetch audit logs:', err);
+          setAuditLogs([]);
+        }
+      } finally {
+        if (isMounted) setIsLoading(false);
       }
-
-      setAuditLogs(data ?? [])
-    } catch (err) {
-      console.error('Failed to fetch audit logs:', err)
-    } finally {
-      setIsLoading(false)
+    };
+  
+    // Only fetch if we don't have data yet
+    if (!auditLogs) {
+      fetchAuditLogs();
     }
-  }
+  
+    return () => {
+      isMounted = false;
+    };
+  }, [req.id]);   // Removed auditLogs from dependencies to avoid loops
 
   const handleDownloadPdf = async () => {
     setIsGeneratingPdf(true)
@@ -210,19 +210,32 @@ export default function ChangeRequestRow({
       }
 
       const requestForPdf: RequestData = {
-        id: req.id,
         project_name: req.project_name ?? '—',
         project_number: projectNumber,
-        initiated_by: initiator,
+        initiator_name: req.initiator_name ?? '—',
         change_description: description ?? '',
+        description: req.description ?? '',
         priority_level: priority,
         status: req.status ?? '',
         created_at: req.created_at ?? new Date().toISOString(),
+        updated_at: req.updated_at ?? new Date().toISOString(),
+        site_coordinates: req.site_coordinates ?? '',
+        route_impact: req.route_impact ?? '',
+        duct_sizes: req.duct_sizes ?? '',
+        material_cost_variation: req.material_cost_variation ?? '',
+        route_deviations: req.route_deviations ?? '',
+        estimated_downtime: req.estimated_downtime ?? '',
+        technical_reason: req.technical_reason ?? '',
+        target_segments: req.target_segments ?? '',
+        fixed_network_approver: req.fixed_network_approver ?? '',
+        wire_line_approver: req.wire_line_approver ?? '',
+        engineering_approver: req.engineering_approver ?? '',
       }
 
       const typedActivities = (activities ?? []) as RequestActivityForPdf[]
 
       const activitiesForPdf: Activity[] = typedActivities.map((activity) => ({
+        serial_number: activity.serial_number,
         activity: activity.activity,
         unit: activity.unit ?? '—',
         contract_qty: Number(activity.contract_qty) || 0,
@@ -290,17 +303,15 @@ export default function ChangeRequestRow({
           <time className="mr-auto text-xs text-slate-500 dark:text-zinc-500">
             Created {formatDate(req.created_at)}
           </time>
-          <button
-            type="button"
-            onClick={() => toggleAuditLog(req.id)}
-            disabled={isLoading}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 dark:border-zinc-700 px-3 py-1.5 text-xs font-medium text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800 disabled:opacity-50 transition-colors"
+          <Link
+            href={`/requests/${req.id}/audit`}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-[#00A651] px-3 py-1.5 text-xs font-medium text-white hover:bg-[#008C4A] transition-colors"
           >
             <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m.75 12l3 3m0 0l3-3m-3 3v-6m-1.5-9H5.625c-.621 0-1.125.504-1.125 1.125v12.75c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V13.5" />
             </svg>
-            {isLoading ? 'Loading...' : expandedId === req.id ? 'Hide audit log' : 'Audit log'}
-          </button>
+            Audit Log
+          </Link>
           <button
             type="button"
             onClick={handleDownloadPdf}
@@ -344,12 +355,6 @@ export default function ChangeRequestRow({
       <div className="border-t border-slate-200/50 dark:border-zinc-800 px-5 pb-5">
         <h3 className="mb-3 text-xs font-semibold text-slate-900 dark:text-zinc-100 uppercase tracking-wider">Approval Timeline</h3>
         <DepartmentTimeline status={req.status} auditLogs={auditLogs ?? undefined} approvers={{ fixed_network_approver: req.fixed_network_approver, wire_line_approver: req.wire_line_approver, engineering_approver: req.engineering_approver }} />
-        {expandedId === req.id && (
-          <div className="mt-4">
-            <h3 className="mb-3 text-xs font-semibold text-slate-900 dark:text-zinc-100 uppercase tracking-wider">Audit History</h3>
-            <AuditTimeline logs={auditLogs ?? undefined} />
-          </div>
-        )}
       </div>
     </div>
       <ChangeRequestDrawer
