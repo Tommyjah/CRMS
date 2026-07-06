@@ -69,6 +69,20 @@ const [technicalSpec, setTechnicalSpec] = useState<TechnicalSpec>({
     technical_reason: '',
     target_segments: '',
   })
+  const [workOrder, setWorkOrder] = useState('')
+  const [changeNumber, setChangeNumber] = useState('')
+  const [changeType, setChangeType] = useState('')
+
+  const CHANGE_TYPES = [
+    'Route Change',
+    'Scope Change',
+    'Soil Type Change',
+    'Damage Change',
+    'Additional Work',
+    'Rework',
+    'Others',
+  ]
+
   const [approvers, setApprovers] = useState<ApproverAssign>({
     fixed_network_approver: '',
     wire_line_approver: '',
@@ -126,6 +140,9 @@ const [technicalSpec, setTechnicalSpec] = useState<TechnicalSpec>({
     const result = await createChangeRequest(formData, activityPayload, {
       ...technicalSpec,
       ...approvers,
+      work_order: workOrder,
+      change_number: changeNumber,
+      change_type: changeType,
     })
 
     if (result?.error) {
@@ -138,6 +155,9 @@ const [technicalSpec, setTechnicalSpec] = useState<TechnicalSpec>({
     setSubmitted(true)
     if (result?.requestId) {
       setCreatedRequestId(result.requestId)
+    }
+    if (result?.changeNumber) {
+      setChangeNumber(result.changeNumber)
     }
     setSuccess('Change request created successfully. You can add attachments below.')
     setLoading(false)
@@ -211,6 +231,21 @@ const [technicalSpec, setTechnicalSpec] = useState<TechnicalSpec>({
                   </select>
                 </label>
 
+                <label className="block">
+                  <span className="block text-xs font-medium text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-1">Type of Change</span>
+                  <select
+                    name="change_type"
+                    value={changeType}
+                    onChange={(e) => setChangeType(e.target.value)}
+                    className="w-full rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-100 px-3 py-2 text-sm focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 dark:focus:ring-teal-500/10 transition-all outline-none"
+                  >
+                    <option value="">Select type of change</option>
+                    {CHANGE_TYPES.map((type) => (
+                      <option key={type} value={type}>{type}</option>
+                    ))}
+                  </select>
+                </label>
+
                 <label className="block sm:col-span-2">
                   <span className="block text-xs font-medium text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-1">Change Description</span>
                   <textarea
@@ -218,6 +253,18 @@ const [technicalSpec, setTechnicalSpec] = useState<TechnicalSpec>({
                     rows={4}
                     required
                     className="w-full rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-100 px-3 py-2 text-sm focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 dark:focus:ring-teal-500/10 transition-all outline-none"
+                  />
+                </label>
+
+                <label className="block sm:col-span-2">
+                  <span className="block text-xs font-medium text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-1">Work Order (WO)</span>
+                  <input
+                    type="text"
+                    name="work_order"
+                    value={workOrder}
+                    onChange={(e) => setWorkOrder(e.target.value)}
+                    className="w-full rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-100 px-3 py-2 text-sm focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 dark:focus:ring-teal-500/10 transition-all outline-none"
+                    placeholder="Optional work order reference number"
                   />
                 </label>
               </div>
@@ -469,6 +516,12 @@ const [technicalSpec, setTechnicalSpec] = useState<TechnicalSpec>({
             {submitted && success && (
               <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800 dark:bg-emerald-950/20 dark:text-emerald-300">
                 {success}
+                {changeNumber && (
+                  <div className="mt-3 rounded-md border border-emerald-300 bg-emerald-100/80 px-4 py-2.5">
+                    <span className="text-xs font-medium uppercase tracking-wider text-emerald-700 dark:text-emerald-300">Change Number</span>
+                    <p className="mt-0.5 font-mono text-base font-bold text-emerald-900 dark:text-emerald-100">{changeNumber}</p>
+                  </div>
+                )}
                 <div className="mt-3">
                   <button
                     type="button"

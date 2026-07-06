@@ -4,6 +4,7 @@ import { useState, useCallback } from 'react'
 import { updateRequestStatus } from '@/app/actions'
 import { isDepartmentResponsible } from '@/lib/security-constants'
 import { isStatus, isRole } from '@/lib/constants'
+import DelegateModal from './DelegateModal'
 
 type StatusButtonsProps = {
   requestId: string
@@ -12,6 +13,7 @@ type StatusButtonsProps = {
     department: string | null
     role: string | null
     email?: string | null
+    id?: string | null
   } | null
   onSuccess?: () => void
   onRejected?: () => void
@@ -25,6 +27,7 @@ export default function StatusButtons({ requestId, status, userProfile, onSucces
   const [localError, setLocalError] = useState<string | null>(null)
   const [showRejectReason, setShowRejectReason] = useState(false)
   const [rejectReason, setRejectReason] = useState('')
+  const [showDelegateModal, setShowDelegateModal] = useState(false)
 
   const handleStatusUpdate = useCallback(async (action: 'APPROVE' | 'REJECT') => {
     setLoading(true)
@@ -53,6 +56,11 @@ export default function StatusButtons({ requestId, status, userProfile, onSucces
     }
   }, [requestId, onSuccess, onRejected, rejectReason])
 
+  const handleDelegateSuccess = useCallback(() => {
+    onSuccess?.()
+    setShowDelegateModal(false)
+  }, [onSuccess])
+
   if (FINAL_STATUSES.includes(status ?? '')) return null
 
   const isApprover = isRole(userProfile?.role) && userProfile.role === 'APPROVER'
@@ -65,6 +73,7 @@ export default function StatusButtons({ requestId, status, userProfile, onSucces
     userProfile.email.trim().toLowerCase() === approverEmail.trim().toLowerCase()
 
   const canTakeAction = isApprover && (isResponsible || isAssignedApprover)
+  const canDelegate = canTakeAction && userProfile?.id
 
   return (
     <div className="flex flex-col gap-1.5">
@@ -101,6 +110,20 @@ export default function StatusButtons({ requestId, status, userProfile, onSucces
           </svg>
           Reject
         </button>
+        {canDelegate && (
+          <button
+            type="button"
+            onClick={() => setShowDelegateModal(true)}
+            disabled={loading}
+            title="Delegate this approval to another approver"
+            className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-all bg-amber-600 text-white hover:bg-amber-700 shadow-sm disabled:opacity-50"
+          >
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" />
+            </svg>
+            Delegate
+          </button>
+        )}
       </div>
 
       {showRejectReason && (
@@ -141,6 +164,13 @@ export default function StatusButtons({ requestId, status, userProfile, onSucces
       {localError && (
         <span className="text-xs text-rose-600 dark:text-rose-400">{localError}</span>
       )}
+
+      <DelegateModal
+        isOpen={showDelegateModal}
+        onClose={() => setShowDelegateModal(false)}
+        requestId={requestId}
+        onSuccess={handleDelegateSuccess}
+      />
     </div>
   )
 }

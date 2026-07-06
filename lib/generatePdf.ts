@@ -35,19 +35,9 @@ export interface RequestData {
   engineering_approver?: string | null
   final_decision_by?: string | null
   final_decision_reason?: string | null
-}
-
-function drawWrappedText(
-  doc: jsPDF,
-  text: string,
-  x: number,
-  y: number,
-  maxWidth: number,
-  lineHeight: number,
-): number {
-  const lines = doc.splitTextToSize(text || '—', maxWidth)
-  doc.text(lines, x, y)
-  return y + lines.length * lineHeight
+  work_order?: string | null
+  change_number?: string | null
+  change_type?: string | null
 }
 
 export async function generatePdf(request: RequestData, activities: Activity[]) {
@@ -62,9 +52,15 @@ export async function generatePdf(request: RequestData, activities: Activity[]) 
     const pageWidth = doc.internal.pageSize.getWidth()
     const margin = 14
     const contentWidth = pageWidth - margin * 2
-    let currentY = 10
+    const pageHeight = doc.internal.pageSize.getHeight()
+    const brandGreen = [0, 171, 78] as const
+    let currentY = 8
 
-    // --- 1. LOGO + ETHIO TELECOM HEADER ---
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(9)
+    doc.setTextColor(0, 0, 0)
+
+    // --- 1. LOGO + HEADER ---
     try {
       doc.addImage('/logo.png', 'PNG', margin, currentY, 40, 16)
     } catch (e) {
@@ -75,115 +71,167 @@ export async function generatePdf(request: RequestData, activities: Activity[]) 
     doc.setFontSize(16)
     doc.setTextColor(0, 0, 0)
     doc.text('ETHIOPIAN TELECOMMUNICATION', margin + 45, currentY + 6)
+    doc.setFont('helvetica', 'normal')
     doc.setFontSize(11)
     doc.text('Change Request Management System', margin + 45, currentY + 12)
 
-    doc.setFillColor(0, 171, 78)
+    doc.setFillColor(...brandGreen)
     doc.rect(margin, currentY + 18, contentWidth, 3, 'F')
-    currentY = currentY + 26
+    currentY += 26
 
-    // --- 2. PART 1: CHANGE REQUEST INFORMATION ---
-    doc.setFontSize(13)
+    // --- 2. CHANGE NUMBER BANNER ---
+    if (request.change_number) {
+      const bannerHeight = 9
+      doc.setFillColor(240, 253, 244)
+      doc.roundedRect(margin, currentY, contentWidth, bannerHeight, 2, 2, 'F')
+      doc.setDrawColor(...brandGreen)
+      doc.setLineWidth(0.4)
+      doc.roundedRect(margin, currentY, contentWidth, bannerHeight, 2, 2, 'S')
+
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(9)
+      doc.setTextColor(0, 100, 50)
+      doc.text('Change Number:', margin + 3, currentY + 5)
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(13)
+      doc.setTextColor(0, 0, 0)
+      doc.text(request.change_number, margin + 38, currentY + 5)
+      currentY += bannerHeight + 2
+    }
+
+    // --- 3. PART 1: CHANGE REQUEST INFORMATION ---
     doc.setFont('helvetica', 'bold')
+    doc.setFontSize(12)
     doc.setTextColor(0, 80, 40)
     doc.text('PART 1: CHANGE REQUEST INFORMATION', margin, currentY)
     currentY += 2
-    doc.setDrawColor(0, 171, 78)
-    doc.setLineWidth(0.6)
+    doc.setDrawColor(...brandGreen)
+    doc.setLineWidth(0.5)
     doc.line(margin, currentY, pageWidth - margin, currentY)
-    currentY += 4
+    currentY += 3
 
-    doc.setFontSize(9)
+    // Submission date
+    const submissionDate = request.created_at
+      ? new Date(request.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })
+      : ''
+
+    // --- Top info rows ---
+    const leftColX = margin + 2
+    const rightColX = pageWidth / 2 + 6
+    const labelW = 36
+    const rowH = 5
+
+    // Row 1
+    const row1Y = currentY
     doc.setFont('helvetica', 'bold')
+    doc.setFontSize(9)
+    doc.text('Project Name:', leftColX, row1Y)
+    doc.setFont('helvetica', 'normal')
+    doc.text(request.project_name || '—', leftColX + labelW, row1Y)
+    doc.setFont('helvetica', 'bold')
+    doc.text('Change Name:', rightColX, row1Y)
+    doc.setFont('helvetica', 'normal')
+    doc.text(request.change_type || '—', rightColX + labelW, row1Y)
+
+    // Row 2
+    const row2Y = currentY + rowH
+    doc.setFont('helvetica', 'bold')
+    doc.text('Project No:', leftColX, row2Y)
+    doc.setFont('helvetica', 'normal')
+    doc.text(request.project_number || '—', leftColX + labelW, row2Y)
+    doc.setFont('helvetica', 'bold')
+    doc.text('Change Number:', rightColX, row2Y)
+    doc.setFont('helvetica', 'normal')
+    const cnShort = request.change_number || '—'
+    doc.text(cnShort, rightColX + labelW, row2Y)
+
+    // Row 3: Initiated by with Sig/Date inline
+    const row3Y = currentY + rowH * 2
+    doc.setFont('helvetica', 'bold')
+    doc.text('Initiated by:', leftColX, row3Y)
+    doc.setFont('helvetica', 'normal')
+    doc.text(request.initiator_name || '—', leftColX + labelW, row3Y)
+
+    const initSigLabelX = leftColX + labelW + 60
+    const initSigLabelW = 10
+    const initSigEndX = initSigLabelX + initSigLabelW + 22
+    const initSigY = row3Y
+    const initDateLabelX = initSigEndX + 4
+    const initDateLabelW = 12
+    const initDateEndX = initDateLabelX + initDateLabelW + 22
+    const initDateY = row3Y
+
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(9)
+    doc.text('Sig:', initSigLabelX, initSigY)
+    doc.text('Date:', initDateLabelX, initDateY)
+
+    doc.setDrawColor(180, 180, 180)
+    doc.setLineWidth(0.3)
+    doc.line(initSigLabelX + initSigLabelW, initSigY, initSigEndX, initSigY)
+    doc.line(initDateLabelX + initDateLabelW, initDateY, initDateEndX, initDateY)
+
+    if (submissionDate) {
+      const dateW = doc.getTextWidth(submissionDate)
+      doc.text(submissionDate, Math.max(initDateLabelX + initDateLabelW + 1, initDateEndX - dateW - 1), initDateY)
+    }
+
+    currentY += rowH * 3 + 2
+
+    // Row 4: WO | Type | Status
+    const row4Y = currentY
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(8)
+    const metaSmallLabelW = 26
+    const smallRow1X = leftColX
+    const smallRow2X = pageWidth / 2 + 2
+
+    doc.text('WO:', smallRow1X, row4Y)
+    doc.setFont('helvetica', 'normal')
+    doc.text(request.work_order || '—', smallRow1X + metaSmallLabelW, row4Y)
+
+    doc.setFont('helvetica', 'bold')
+    doc.text('Type:', smallRow2X, row4Y)
+    doc.setFont('helvetica', 'normal')
+    doc.text(request.change_type || '—', smallRow2X + metaSmallLabelW, row4Y)
+
+    doc.setFont('helvetica', 'bold')
+    doc.text('Status:', smallRow1X, row4Y + rowH)
+    doc.setFont('helvetica', 'normal')
+    doc.text(request.status ? request.status.replace(/_/g, ' ') : '—', smallRow1X + metaSmallLabelW, row4Y + rowH)
+
+    currentY += rowH * 2 + 2
+
+    // Change Description — inline
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(9)
     doc.setTextColor(0, 0, 0)
-    doc.text('Change Description:', margin, currentY)
-    doc.setFont('helvetica', 'normal')
-    currentY = drawWrappedText(doc, request.change_description || request.description || '—', margin + 4, currentY + 4, contentWidth - 8, 4)
-    currentY += 4
-
-    const metaLeft = [
-      ['Project Name:', request.project_name || '—'],
-      ['Project Number:', request.project_number || '—'],
-      ['Initiated By:', request.initiator_name || '—'],
-      ['Date:', request.created_at ? new Date(request.created_at).toLocaleDateString() : '—'],
-    ]
-
-    const metaRight = [
-      ['Priority Level:', request.priority_level || '—'],
-      ['Status:', request.status ? request.status.replace(/_/g, ' ') : '—'],
-      ['Reference No:', request.project_number || '—'],
-      ['Last Updated:', request.updated_at ? new Date(request.updated_at).toLocaleString() : '—'],
-    ]
-
-    const leftColX = margin
-    const rightColX = pageWidth / 2 + 10
-    doc.setFontSize(9)
-
-    metaLeft.forEach(([label, value], idx) => {
-      const y = currentY + idx * 6
-      doc.setFont('helvetica', 'bold')
-      doc.text(label, leftColX, y)
-      doc.setFont('helvetica', 'normal')
-      doc.text(String(value), leftColX + 38, y)
-    })
-
-    metaRight.forEach(([label, value], idx) => {
-      const y = currentY + idx * 6
-      doc.setFont('helvetica', 'bold')
-      doc.text(label, rightColX, y)
-      doc.setFont('helvetica', 'normal')
-      doc.text(String(value), rightColX + 38, y)
-    })
-
-    currentY += metaLeft.length * 6 + 4
-
-    const statusText = request.status ? request.status.replace(/_/g, ' ') : 'UNKNOWN'
-    doc.setFillColor(230, 230, 230)
-    doc.roundedRect(margin, currentY, contentWidth, 8, 2, 2, 'F')
-    doc.setFont('helvetica', 'bold')
-    doc.setFontSize(10)
-    doc.setTextColor(60, 60, 60)
-    doc.text(`Current Status: ${statusText}`, margin + 3, currentY + 5.5)
-    currentY += 12
-
-    doc.setFont('helvetica', 'bold')
-    doc.setFontSize(10)
-    doc.setTextColor(0, 0, 0)
-    doc.text('Impact on Deliverables:', margin, currentY)
+    doc.text('Change Description:', margin, currentY + 3)
     doc.setFont('helvetica', 'normal')
     doc.setFontSize(9)
-    currentY = drawWrappedText(doc, request.target_segments || '—', margin + 4, currentY + 4, contentWidth - 8, 4)
-    currentY += 5
+    const descLabelW = doc.getTextWidth('Change Description:') + 4
+    const descVal = request.change_description || request.description || '—'
+    const descLines = doc.splitTextToSize(descVal, contentWidth - descLabelW - 4)
+    const descBoxH = Math.max(8, descLines.length * 4 + 2)
+    doc.setDrawColor(0, 0, 0)
+    doc.setLineWidth(0.1)
+    doc.rect(margin, currentY, contentWidth, descBoxH)
+    doc.text(descLines.slice(0, 2), margin + 2 + descLabelW, currentY + 4)
+    currentY += descBoxH + 2
 
-    doc.setFont('helvetica', 'bold')
-    doc.setFontSize(10)
-    doc.text('Priority Level:', margin, currentY)
-    doc.setFont('helvetica', 'normal')
-    doc.setFontSize(9)
-    doc.text(request.priority_level || '—', margin + 38, currentY)
-    currentY += 8
-
-    doc.setFont('helvetica', 'bold')
-    doc.setFontSize(10)
-    doc.text('Impact of Not Responding:', margin, currentY)
-    doc.setFont('helvetica', 'normal')
-    doc.setFontSize(9)
-    currentY = drawWrappedText(doc, request.technical_reason || '—', margin + 4, currentY + 4, contentWidth - 8, 4)
-    currentY += 5
-
-    // --- 3. ACTIVITIES TABLE ---
-    if (currentY > 220) {
+    // --- 4. MAIN ACTIVITIES TABLE ---
+    if (currentY > pageHeight - 60) {
       doc.addPage()
       currentY = margin
     }
 
     doc.setFont('helvetica', 'bold')
     doc.setFontSize(10)
-    doc.setTextColor(0, 80, 40)
+    doc.setTextColor(...brandGreen)
     doc.text('Main Activities', margin, currentY)
-    currentY += 3
+    currentY += 2
 
-    const tableHeaders = [['S/No', 'Main Activity', 'Unit', 'Contract Quantity', 'Executed Quantity', 'Difference', 'Reason']]
+    const tableHeaders = [['S/No', 'Main Activity', 'Unit', 'Contract Qty', 'Executed Qty', 'Difference', 'Reason']]
     const tableRows = activities.map((act, index) => {
       const contractQty = Number(act.contract_qty) || 0
       const executedQty = Number(act.executed_qty) || 0
@@ -205,7 +253,7 @@ export async function generatePdf(request: RequestData, activities: Activity[]) 
       body: tableRows,
       theme: 'grid',
       headStyles: {
-        fillColor: [0, 171, 78],
+        fillColor: [...brandGreen],
         textColor: [255, 255, 255],
         fontStyle: 'bold',
         halign: 'center',
@@ -215,6 +263,7 @@ export async function generatePdf(request: RequestData, activities: Activity[]) 
         font: 'helvetica',
         fontSize: 8,
         textColor: [30, 30, 30],
+        cellPadding: 1.5,
       },
       columnStyles: {
         0: { halign: 'center', cellWidth: 14 },
@@ -226,161 +275,249 @@ export async function generatePdf(request: RequestData, activities: Activity[]) 
         6: { halign: 'left', cellWidth: 45 },
       },
       margin: { left: margin, right: margin },
-    } as any)
+    })
 
-    currentY = (doc as any).lastAutoTable.finalY + 10
+    currentY = (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 4
 
-    // --- 4. SIGNATURES: CONFIRMED / APPROVED ---
-    if (currentY > 230) {
+    // --- 5. IMPACT FIELDS + SIGNATURES (PART 1) ---
+    if (currentY > pageHeight - 100) {
       doc.addPage()
       currentY = margin
     }
 
+    // Impact on deliverables — inline
+    const impactLabel1 = 'Impact on deliverables:'
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(9)
+    doc.setTextColor(0, 0, 0)
+    const impactLabel1W = doc.getTextWidth(impactLabel1) + 4
+    doc.text(impactLabel1, margin + 2, currentY + 4)
+    doc.setFont('helvetica', 'normal')
+    const impactVal1 = request.target_segments || ''
+    const impactVal1Lines = doc.splitTextToSize(impactVal1, contentWidth - impactLabel1W - 4)
+    doc.text(impactVal1Lines.slice(0, 2), margin + 2 + impactLabel1W, currentY + 4)
+    const box1H = Math.max(7, impactVal1Lines.length * 4 + 2)
+    doc.setDrawColor(0, 0, 0)
+    doc.setLineWidth(0.1)
+    doc.rect(margin, currentY, contentWidth, box1H)
+    currentY += box1H + 2
+
+    // Priority level — inline
+    const priLabel = 'Priority level (circle one):'
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(9)
+    const priLabelW = doc.getTextWidth(priLabel) + 4
+    doc.text(priLabel, margin + 2, currentY + 4)
+    doc.setFont('helvetica', 'normal')
+    const priVal = request.priority_level || ''
+    const priValLines = doc.splitTextToSize(`${priVal}    (1. High    2. Medium    3. Low)`, contentWidth - priLabelW - 4)
+    doc.text(priValLines.slice(0, 1), margin + 2 + priLabelW, currentY + 4)
+    doc.rect(margin, currentY, contentWidth, 7)
+    currentY += 9
+
+    // Impact of not responding — inline
+    const impactLabel2 = 'Impact of not responding to the change:'
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(9)
+    const impactLabel2W = doc.getTextWidth(impactLabel2) + 4
+    doc.text(impactLabel2, margin + 2, currentY + 4)
+    doc.setFont('helvetica', 'normal')
+    const impactVal2 = request.technical_reason || ''
+    const impactVal2Lines = doc.splitTextToSize(impactVal2, contentWidth - impactLabel2W - 4)
+    doc.text(impactVal2Lines.slice(0, 2), margin + 2 + impactLabel2W, currentY + 4)
+    const box2H = Math.max(7, impactVal2Lines.length * 4 + 2)
+    doc.setDrawColor(0, 0, 0)
+    doc.setLineWidth(0.1)
+    doc.rect(margin, currentY, contentWidth, box2H)
+    currentY += box2H + 2
+
+    // Part 1 signatures
     doc.setDrawColor(0, 0, 0)
     doc.setLineWidth(0.3)
     doc.line(margin, currentY, pageWidth - margin, currentY)
     currentY += 4
 
-    doc.setFont('helvetica', 'bold')
-    doc.setFontSize(11)
-    doc.setTextColor(0, 80, 40)
-    doc.text('Request Confirmed / Approved By', margin, currentY)
-    currentY += 7
-
-    const approvers = [
-      { label: 'Initiator / Requester', name: request.initiator_name || '—' },
-      { label: 'Fixed Network Approver', name: request.fixed_network_approver || '—' },
-      { label: 'Wire Line Planning Approver', name: request.wire_line_approver || '—' },
-      { label: 'Engineering Approver', name: request.engineering_approver || '—' },
+    const sigBlocks = [
+      { label: 'Request confirmed by', name: request.initiator_name || '', date: submissionDate },
+      { label: 'Request approved by', name: request.engineering_approver || '', date: submissionDate },
     ]
 
-    const rowHeight = 20
-    approvers.forEach((approver) => {
+    sigBlocks.forEach((block) => {
       const rowY = currentY
-
-      doc.setDrawColor(180, 180, 180)
-      doc.setLineWidth(0.2)
-      doc.line(margin + 8, rowY + 8, margin + 75, rowY + 8)
-      doc.line(pageWidth - margin - 75, rowY + 8, pageWidth - margin - 8, rowY + 8)
 
       doc.setFont('helvetica', 'bold')
       doc.setFontSize(9)
-      doc.setTextColor(80, 80, 80)
-      doc.text(approver.label, margin, rowY + 2)
+      doc.setTextColor(0, 0, 0)
+      doc.text(`${block.label}:`, margin, rowY + 4)
+
+      const nameUnderlineStartX = margin + 52
+      const nameUnderlineEndX = nameUnderlineStartX + 50
+      const nameUnderlineY = rowY + 4
+
+      const sigLabelX = nameUnderlineEndX + 4
+      const sigLabelW = 10
+      const sigEndX = sigLabelX + sigLabelW + 22
+      const sigY = rowY + 4
+
+      const dateLabelX = sigEndX + 4
+      const dateLabelW = 12
+      const dateEndX = dateLabelX + dateLabelW + 22
+      const dateY = rowY + 4
 
       doc.setFont('helvetica', 'normal')
       doc.setFontSize(9)
-      doc.setTextColor(0, 0, 0)
-      doc.text('Signature:', margin, rowY + 8)
-      doc.text('Date:', margin, rowY + 14.5)
+      doc.text('Sig:', sigLabelX, sigY)
+      doc.text('Date:', dateLabelX, dateY)
 
-      doc.text(approver.name || '—', margin + 78, rowY + 8)
+      doc.setDrawColor(180, 180, 180)
+      doc.setLineWidth(0.3)
+      doc.line(nameUnderlineStartX, nameUnderlineY, nameUnderlineEndX, nameUnderlineY)
+      doc.line(sigLabelX + sigLabelW, sigY, sigEndX, sigY)
+      doc.line(dateLabelX + dateLabelW, dateY, dateEndX, dateY)
 
-      currentY += rowHeight
+      if (block.name) {
+        const nameW = doc.getTextWidth(block.name)
+        doc.text(block.name, Math.max(nameUnderlineStartX + 1, nameUnderlineEndX - nameW - 1), nameUnderlineY)
+      }
+      if (block.date) {
+        const dateW = doc.getTextWidth(block.date)
+        doc.text(block.date, Math.max(dateLabelX + dateLabelW + 1, dateEndX - dateW - 1), dateY)
+      }
+
+      currentY += 9
     })
 
-    currentY += 8
+    currentY += 6
 
-    // --- 5. PART 2: CHANGE REQUEST ANALYSIS & DECISION ---
-    if (currentY > 220) {
+    // --- 6. PART 2: CHANGE REQUEST ANALYSIS & DECISION ---
+    if (currentY > pageHeight - 60) {
       doc.addPage()
       currentY = margin
     }
 
-    doc.setFontSize(13)
     doc.setFont('helvetica', 'bold')
-    doc.setTextColor(0, 80, 40)
-    doc.text('PART 2: CHANGE REQUEST ANALYSIS & DECISION', margin, currentY)
-    currentY += 2
-    doc.setDrawColor(0, 171, 78)
-    doc.setLineWidth(0.6)
-    doc.line(margin, currentY, pageWidth - margin, currentY)
-    currentY += 6
+    doc.setFontSize(11)
+    doc.setTextColor(...brandGreen)
+    doc.text('PART 2: Change Request analysis & decision(WL planning and Eng.)', margin, currentY)
+    currentY += 4
 
-    doc.setTextColor(0, 0, 0)
+    // Change Analysis header
+    doc.setFillColor(...brandGreen)
+    doc.rect(margin, currentY, contentWidth, 6, 'F')
+    doc.setFont('helvetica', 'bold')
     doc.setFontSize(10)
+    doc.setTextColor(0, 0, 0)
+    doc.text('Change Analysis :', margin + 2, currentY + 4)
+    currentY += 8
 
+    // Analysis fields — inline
     const analysisFields = [
-      { label: 'Task / Scope Affected', value: request.description || '—' },
-      { label: 'Impact on Deliverables', value: request.target_segments || '—' },
-      { label: 'Priority Level', value: request.priority_level || '—' },
-      { label: 'Impact of Not Responding', value: request.technical_reason || '—' },
-      { label: 'Cost / Risk / Quality Evaluation', value: request.material_cost_variation || '—' },
-      { label: 'Alternative Recommendation', value: request.route_deviations || '—' },
+      { label: 'Task/scope affected:', value: request.description || '' },
+      { label: 'cost evaluation:', value: request.material_cost_variation || '' },
+      { label: 'Risk evaluation:', value: request.route_deviations || '' },
+      { label: 'Quality evaluation:', value: request.estimated_downtime || '' },
+      { label: 'Alternative recommendation (if not approved):', value: request.route_impact || '' },
     ]
 
     analysisFields.forEach((field) => {
-      if (currentY > 255) {
+      if (currentY > pageHeight - 30) {
         doc.addPage()
         currentY = margin
       }
 
+      const labelText = `${field.label}`
       doc.setFont('helvetica', 'bold')
-      doc.setFontSize(10)
-      doc.text(`${field.label}:`, margin, currentY)
-      currentY += 5
-      doc.setFont('helvetica', 'normal')
       doc.setFontSize(9)
-      currentY = drawWrappedText(doc, field.value, margin + 4, currentY, contentWidth - 8, 4)
-      currentY += 4
+      const labelWidth = doc.getTextWidth(labelText) + 4
+      const valueStartX = margin + 2 + labelWidth
+      const valueMaxWidth = contentWidth - labelWidth - 4
+
+      doc.setTextColor(0, 0, 0)
+      doc.text(labelText, margin + 2, currentY + 4)
+
+      if (field.value) {
+        doc.setFont('helvetica', 'normal')
+        doc.setFontSize(9)
+        const valLines = doc.splitTextToSize(field.value, valueMaxWidth)
+        const neededLines = Math.min(valLines.length, 2)
+        const boxHeight = neededLines === 1 ? 7 : 11
+        doc.setDrawColor(0, 0, 0)
+        doc.setLineWidth(0.1)
+        doc.rect(margin, currentY, contentWidth, boxHeight)
+        doc.text(valLines.slice(0, neededLines), valueStartX, currentY + 4)
+        currentY += boxHeight + 1
+      } else {
+        doc.setDrawColor(0, 0, 0)
+        doc.setLineWidth(0.1)
+        doc.rect(margin, currentY, contentWidth, 7)
+        currentY += 8
+      }
     })
 
-    // --- 6. FINAL DECISION ---
-    if (currentY > 235) {
+    currentY += 3
+
+    // --- 7. APPROVAL SIGNATURES (PART 2) ---
+    if (currentY > pageHeight - 40) {
       doc.addPage()
       currentY = margin
     }
 
-    doc.setDrawColor(0, 0, 0)
-    doc.setLineWidth(0.3)
-    doc.line(margin, currentY, pageWidth - margin, currentY)
-    currentY += 6
+    const approvalBlocks = [
+      { label: 'Change Approved by Planner/civil site supervisor', name: request.wire_line_approver || '', date: submissionDate },
+      { label: 'Change Approved by Supervisor', name: request.fixed_network_approver || '', date: submissionDate },
+    ]
 
-    doc.setFont('helvetica', 'bold')
-    doc.setFontSize(11)
-    doc.setTextColor(0, 80, 40)
-    doc.text('Final Decision', margin, currentY)
-    currentY += 7
+    approvalBlocks.forEach((block) => {
+      const rowY = currentY
 
-    const isApproved = request.status === 'APPROVED'
-    const isRejected = request.status === 'REJECTED'
-    const hasDecision = isApproved || isRejected
+      doc.setDrawColor(0, 0, 0)
+      doc.setLineWidth(0.1)
+      doc.rect(margin, rowY, contentWidth, 9)
 
-    if (hasDecision) {
-      const statusColor = isApproved ? [0, 128, 0] : [180, 0, 0]
-      const statusLabel = isApproved ? 'APPROVED' : 'REJECTED'
-
-      doc.setFillColor(statusColor[0], statusColor[1], statusColor[2])
-      doc.roundedRect(margin, currentY, contentWidth, 24, 3, 3, 'F')
-
-      doc.setTextColor(255, 255, 255)
       doc.setFont('helvetica', 'bold')
-      doc.setFontSize(12)
-      doc.text(`${statusLabel}`, margin + 4, currentY + 10)
+      doc.setFontSize(9)
+      doc.setTextColor(0, 0, 0)
+      doc.text(`${block.label}:`, margin + 2, rowY + 4)
+
+      const nameUnderlineStartX = margin + contentWidth * 0.45
+      const nameUnderlineEndX = nameUnderlineStartX + 38
+      const nameUnderlineY = rowY + 4
+
+      const sigLabelX = nameUnderlineEndX + 3
+      const sigLabelW = 10
+      const sigEndX = sigLabelX + sigLabelW + 16
+      const sigY = rowY + 4
+
+      const dateLabelX = sigEndX + 3
+      const dateLabelW = 12
+      const dateEndX = dateLabelX + dateLabelW + 16
+      const dateY = rowY + 4
 
       doc.setFont('helvetica', 'normal')
-      doc.setFontSize(10)
-      const decisionText = request.final_decision_by
-        ? `${isApproved ? 'Approved' : 'Rejected'} by: ${request.final_decision_by}`
-        : `${isApproved ? 'Approved' : 'Rejected'}`
+      doc.setFontSize(9)
+      doc.text('Sig:', sigLabelX, sigY)
+      doc.text('Date:', dateLabelX, dateY)
 
-      doc.text(decisionText, margin + 4, currentY + 18)
+      doc.setDrawColor(180, 180, 180)
+      doc.setLineWidth(0.3)
+      doc.line(nameUnderlineStartX, nameUnderlineY, nameUnderlineEndX, nameUnderlineY)
+      doc.line(sigLabelX + sigLabelW, sigY, sigEndX, sigY)
+      doc.line(dateLabelX + dateLabelW, dateY, dateEndX, dateY)
 
-      if (request.final_decision_reason) {
-        doc.text(`Reason: ${request.final_decision_reason}`, margin + 4, currentY + 23)
+      if (block.name) {
+        const nameW = doc.getTextWidth(block.name)
+        doc.text(block.name, Math.max(nameUnderlineStartX + 1, nameUnderlineEndX - nameW - 1), nameUnderlineY)
       }
-    } else {
-      doc.setFillColor(240, 240, 240)
-      doc.roundedRect(margin, currentY, contentWidth, 18, 3, 3, 'F')
-      doc.setTextColor(100, 100, 100)
-      doc.setFont('helvetica', 'normal')
-      doc.setFontSize(10)
-      doc.text('Pending final decision', margin + 4, currentY + 10)
-      doc.text('This request has not been finalized yet.', margin + 4, currentY + 16)
-    }
+      if (block.date) {
+        const dateW = doc.getTextWidth(block.date)
+        doc.text(block.date, Math.max(dateLabelX + dateLabelW + 1, dateEndX - dateW - 1), dateY)
+      }
+
+      currentY += 10
+    })
 
     // Footer
-    const footerY = doc.internal.pageSize.getHeight() - 15
+    const footerY = pageHeight - 12
     doc.setFont('helvetica', 'italic')
     doc.setFontSize(8)
     doc.setTextColor(120, 120, 120)

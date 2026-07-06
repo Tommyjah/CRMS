@@ -47,11 +47,14 @@ type ExtraFields = {
    wire_line_approver?: string
    engineering_approver?: string
    target_segments?: string
- }
+   work_order?: string
+   change_number?: string
+   change_type?: string
+  }
 
 export async function logRequestActivity(
    requestId: string,
-   action: 'CREATE' | 'APPROVE' | 'REJECT',
+   action: 'CREATE' | 'APPROVE' | 'REJECT' | 'DELEGATE',
    previousStatus: string | null,
    newStatus: string | null,
    comment?: string | null
@@ -98,6 +101,9 @@ type CreateChangeRequestInput = {
   wire_line_approver?: string | null
   engineering_approver?: string | null
   target_segments?: string | null
+  work_order?: string | null
+  change_number?: string | null
+  change_type?: string | null
 }
 
 /**
@@ -153,6 +159,9 @@ export async function createChangeRequest(
     wire_line_approver: getString('wire_line_approver'),
     engineering_approver: getString('engineering_approver'),
     target_segments: getString('target_segments'),
+    work_order: getString('work_order'),
+    change_number: getString('change_number'),
+    change_type: getString('change_type'),
   }
 
   const payload: Database['public']['Tables']['change_requests']['Insert'] = {
@@ -174,9 +183,22 @@ export async function createChangeRequest(
     wire_line_approver: input.wire_line_approver ?? null,
     engineering_approver: input.engineering_approver ?? null,
     target_segments: input.target_segments ?? null,
+    work_order: input.work_order ?? null,
+    change_number: input.change_number ?? null,
+    change_type: input.change_type ?? null,
   }
 
   const supabase = await createClient()
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: changeNumber, error: cnError } = await (supabase as any).rpc('get_next_change_number')
+
+  if (cnError || !changeNumber) {
+    return { success: false, error: toErrorString(cnError, 'Failed to generate change number') }
+  }
+
+  payload.change_number = changeNumber as string
+
   const { data, error } = await supabase
    .from('change_requests')
    .insert(payload)
@@ -212,7 +234,7 @@ export async function createChangeRequest(
   }
 
    revalidatePath('/')
-   return { success: true, message: 'Change request created successfully', requestId: data.id }
+   return { success: true, message: 'Change request created successfully', requestId: data.id, changeNumber }
  }
 
 /**
@@ -342,8 +364,73 @@ const { error: updateError } = await supabase
       action === 'REJECT' ? comment ?? null : null
     )
 
-   revalidatePath('/')
-   return { success: true, message: action === 'APPROVE' ? 'Request approved successfully' : 'Request rejected successfully' }
+    revalidatePath('/')
+    return { success: true, message: action === 'APPROVE' ? 'Request approved successfully' : 'Request rejected successfully' }
+  }
+
+/**
+ * Delegates the current approver's approval to another person.
+ * Accepts a free-text name/email for the delegatee.
+ */
+export async function delegateApproval(requestId: string, delegateTo: string) {
+  const supabase = await createClient()
+  const { profile, user, error: authError } = await getCurrentProfile()
+
+  if (authError || !user || !profile) {
+    logAuthFailure('unknown', 'DELEGATE', 'Not authenticated')
+    return { success: false, error: toErrorString(authError, 'Not authenticated') }
+  }
+
+  const { data: request, error: requestError } = await supabase
+    .from('change_requests')
+    .select('status')
+    .eq('id', requestId)
+    .single()
+
+  if (requestError || !request) {
+    logAuthFailure(user.id, 'DELEGATE', 'Request not found', { requestId })
+    return { success: false, error: 'Change request ticket not found.' }
+  }
+
+  if (!isStatus(request.status)) {
+    logAuthFailure(user.id, 'DELEGATE', 'Invalid status for delegation', { status: request.status })
+    return { success: false, error: 'This ticket is not active or has already reached a finalized state.' }
+  }
+
+  if (request.status === 'APPROVED' || request.status === 'REJECTED') {
+    logAuthFailure(user.id, 'DELEGATE', 'Request already finalized', { status: request.status })
+    return { success: false, error: 'This request has already been finalized and cannot be delegated.' }
+  }
+
+  const trimmedDelegateTo = delegateTo.trim()
+  if (!trimmedDelegateTo) {
+    return { success: false, error: 'Please enter a name or email for the delegatee.' }
+  }
+
+  const { error: delegationError } = await supabase
+    .from('delegations')
+    .insert({
+      request_id: requestId,
+      from_user_id: profile.id,
+      to_user_id: trimmedDelegateTo,
+      status: 'active',
+    })
+
+  if (delegationError) {
+    logAuthFailure(user.id, 'DELEGATE', 'Database insert failed', { delegationError })
+    return { success: false, error: delegationError.message }
+  }
+
+  await logRequestActivity(
+    requestId,
+    'DELEGATE',
+    request.status,
+    request.status,
+    `Delegated approval to ${trimmedDelegateTo}`
+  )
+
+  revalidatePath('/')
+  return { success: true, message: `Approval delegated to ${trimmedDelegateTo}` }
 }
 
 /**
@@ -358,6 +445,90 @@ export async function getUserProfile() {
     return { success: false, error, data: null }
   }
   return { success: true, data: profile }
+}
+
+/**
+ * Fetches change requests that have been delegated to the current user.
+ * Matches against the user's email and full_name in the delegations table.
+ */
+export async function getDelegatedToMeRequests() {
+  const { profile, user, error: authError } = await getCurrentProfile()
+  if (authError || !user || !profile) {
+    return { success: false, error: toErrorString(authError, 'Not authenticated'), data: [] }
+  }
+
+  const supabase = await createClient()
+
+  const searchTerms = [profile.email, profile.full_name].filter((term): term is string => typeof term === 'string' && term.trim().length > 0)
+
+  if (searchTerms.length === 0) {
+    return { success: true, data: [] }
+  }
+
+  const results = await Promise.all(
+    searchTerms.map((term) =>
+      supabase
+        .from('delegations')
+        .select(`
+          *,
+          change_requests (
+            id,
+            project_name,
+            project_number,
+            status,
+            created_at,
+            updated_at,
+            change_description,
+            description,
+            priority_level,
+            initiated_by,
+            initiator_name,
+            fixed_network_approver,
+            wire_line_approver,
+            engineering_approver,
+            work_order,
+            change_number,
+            change_type
+          )
+        `)
+        .eq('status', 'active')
+        .eq('to_user_id', term)
+        .order('created_at', { ascending: false })
+    )
+  )
+
+  const allData = results.flatMap((result) => result.data ?? [])
+  const seen = new Set<string>()
+  const deduped = allData.filter((item) => {
+    const key = `${item.request_id}-${item.to_user_id}-${item.created_at}`
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+
+  const fromUserIds = Array.from(new Set(deduped.map((item) => item.from_user_id).filter(Boolean)))
+  const profileMap = new Map<string, string>()
+
+  if (fromUserIds.length > 0) {
+    const { data: profiles } = await supabase
+      .from('profiles')
+      .select('id, full_name, email')
+      .in('id', fromUserIds)
+
+    for (const p of profiles ?? []) {
+      profileMap.set(p.id, p.full_name || p.email || 'Unknown')
+    }
+  }
+
+  const enriched = deduped.map((item) => ({
+    ...item,
+    from_user_name: profileMap.get(item.from_user_id) || null,
+  }))
+
+  return {
+    success: true,
+    data: enriched as unknown as { change_requests: ChangeRequest; from_user_name: string | null }[],
+  }
 }
 
 /**

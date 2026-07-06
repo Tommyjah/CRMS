@@ -10,6 +10,7 @@ declare module 'jspdf-autotable' {
     columnStyles?: Record<number, Record<string, unknown>>
     styles?: Record<string, unknown>
     didDrawPage?: () => void
+    margin?: { left?: number; right?: number; top?: number; bottom?: number }
   }
 
   function autoTable(doc: jsPDF, options: AutoTableOptions): void

@@ -54,14 +54,19 @@ function LagBadge({ hours }: { hours: number }) {
 
 function DepartmentTimeline({ status, auditLogs, approvers }: { status: string | null; auditLogs: RequestAuditLog[] | undefined; approvers: { fixed_network_approver: string | null; wire_line_approver: string | null; engineering_approver: string | null } }) {
   const steps = STAGE_STEPS
-  const completed = auditLogs?.map((entry) => entry.new_status).filter(Boolean) as string[] ?? []
+  const completed = (auditLogs ?? []).map((entry) => entry.new_status).filter(Boolean) as string[]
   const stageLabels = STAGE_LABELS
+
+  const delegationComment = (auditLogs ?? []).find((entry) => entry.action === 'DELEGATE')?.comment ?? null
+  const delegatedTo = delegationComment?.replace(/^Delegated(?: approval)? to:?\s*/i, '') ?? null
+  const delegationStatus = delegationComment ? ((auditLogs ?? []).find((entry) => entry.action === 'DELEGATE')?.previous_status ?? null) : null
 
   return (
     <ol className="mt-4 space-y-2">
       {steps.map((step) => {
         const isComplete = completed.includes(step)
         const isCurrent = step === status
+        const isDelegated = step === delegationStatus && !!delegatedTo
         const approverField = APPROVER_FIELD[step] as keyof typeof approvers | undefined
         const approverName = approverField ? approvers[approverField] : null
         return (
@@ -86,8 +91,13 @@ function DepartmentTimeline({ status, auditLogs, approvers }: { status: string |
                 }
               >
                 {stageLabels[step] || step}
+                {isDelegated && (
+                  <span className="ml-2 text-xs font-medium text-amber-700 dark:text-amber-400">
+                    (Delegated to {delegatedTo})
+                  </span>
+                )}
               </span>
-              {approverField && approverName && (
+              {approverField && approverName && !isDelegated && (
                 <span className="ml-2 text-xs text-teal-600 dark:text-teal-400 truncate">
                   · {approverName}
                 </span>
@@ -115,7 +125,7 @@ type ChangeRequestRowProps = {
   calculateLagHours: (req: RequestWithAudit) => number
   expandedId: string | null
   setExpandedId: (id: string | null) => void
-  userProfile: { department: string | null; role: string | null; email?: string | null } | null
+  userProfile: { department: string | null; role: string | null; email?: string | null; id?: string | null } | null
 }
 
 export default function ChangeRequestRow({

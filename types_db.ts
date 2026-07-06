@@ -36,6 +36,9 @@ export type Database = {
           fixed_network_approver: string | null;
           wire_line_approver: string | null;
           target_segments: string | null;
+          work_order: string | null;
+          change_number: string | null;
+          change_type: string | null;
         };
         Insert: {
           change_description?: string | null;
@@ -55,11 +58,14 @@ export type Database = {
           route_impact?: string | null;
           site_coordinates?: string | null;
           status?: string | null;
+          target_segments?: string | null;
           technical_reason?: string | null;
           updated_at?: string | null;
           fixed_network_approver?: string | null;
           wire_line_approver?: string | null;
-          target_segments?: string | null;
+          work_order?: string | null;
+          change_number?: string | null;
+          change_type?: string | null;
         };
         Update: {
           change_description?: string | null;
@@ -79,11 +85,14 @@ export type Database = {
           route_impact?: string | null;
           site_coordinates?: string | null;
           status?: string | null;
+          target_segments?: string | null;
           technical_reason?: string | null;
           updated_at?: string | null;
           fixed_network_approver?: string | null;
           wire_line_approver?: string | null;
-          target_segments?: string | null;
+          work_order?: string | null;
+          change_number?: string | null;
+          change_type?: string | null;
         };
         Relationships: [];
       };
@@ -313,6 +322,51 @@ export type Database = {
             referencedRelation: "change_requests";
             referencedColumns: ["id"];
           },
+        ];
+      };
+      delegations: {
+        Row: {
+          created_at: string | null;
+          from_user_id: string;
+          id: string;
+          request_id: string;
+          status: string | null;
+          to_user_id: string;
+          updated_at: string | null;
+        };
+        Insert: {
+          created_at?: string | null;
+          from_user_id: string;
+          id?: string;
+          request_id: string;
+          status?: string | null;
+          to_user_id: string;
+          updated_at?: string | null;
+        };
+        Update: {
+          created_at?: string | null;
+          from_user_id?: string;
+          id?: string;
+          request_id?: string;
+          status?: string | null;
+          to_user_id?: string;
+          updated_at?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "delegations_request_id_fkey";
+            columns: ["request_id"];
+            isOneToOne: false;
+            referencedRelation: "change_requests";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "delegations_from_user_id_fkey";
+            columns: ["from_user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          }
         ];
       };
     };

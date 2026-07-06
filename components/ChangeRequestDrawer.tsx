@@ -96,8 +96,14 @@ export default function ChangeRequestDrawer({ request, isOpen, onClose }: Change
               <div className="space-y-6">
                  {/* Header Information */}
                  <section className="space-y-4">
-                   <h3 className="text-sm font-semibold text-slate-900 dark:text-zinc-100">Header Information</h3>
-                   <div className="grid grid-cols-2 gap-4 rounded-lg border border-slate-200/80 dark:border-zinc-800/80 bg-slate-50/30 dark:bg-zinc-800/20 p-4">
+                    <h3 className="text-sm font-semibold text-slate-900 dark:text-zinc-100">Header Information</h3>
+                    {request.change_number && (
+                      <div className="rounded-lg border border-emerald-200 dark:border-emerald-900/60 bg-emerald-50 dark:bg-emerald-950/20 p-3">
+                        <span className="text-xs font-medium text-emerald-700 dark:text-emerald-300 uppercase tracking-wider">Change Number</span>
+                        <p className="mt-1 font-mono text-lg font-bold text-emerald-900 dark:text-emerald-100">{request.change_number}</p>
+                      </div>
+                    )}
+                    <div className="grid grid-cols-2 gap-4 rounded-lg border border-slate-200/80 dark:border-zinc-800/80 bg-slate-50/30 dark:bg-zinc-800/20 p-4">
                      <div>
                       <span className="text-xs font-medium text-slate-500 dark:text-zinc-400">Project Name</span>
                       <p className="mt-1 text-sm font-medium text-slate-900 dark:text-zinc-100">{request.project_name}</p>
@@ -114,6 +120,18 @@ export default function ChangeRequestDrawer({ request, isOpen, onClose }: Change
                       <span className="text-xs font-medium text-slate-500 dark:text-zinc-400">Priority Level</span>
                       <p className="mt-1 text-sm text-slate-700 dark:text-zinc-300">{request.priority_level || '—'}</p>
                     </div>
+                    {request.change_type && (
+                      <div>
+                        <span className="text-xs font-medium text-slate-500 dark:text-zinc-400">Type of Change</span>
+                        <p className="mt-1 text-sm text-slate-700 dark:text-zinc-300">{request.change_type}</p>
+                      </div>
+                    )}
+                    {request.work_order && (
+                      <div className="sm:col-span-2">
+                        <span className="text-xs font-medium text-slate-500 dark:text-zinc-400">Work Order (WO)</span>
+                        <p className="mt-1 text-sm font-medium text-slate-900 dark:text-zinc-100">{request.work_order}</p>
+                      </div>
+                    )}
                     <div>
                       <span className="text-xs font-medium text-slate-500 dark:text-zinc-400">Status</span>
                       <p className="mt-1">

@@ -5,8 +5,9 @@ import Link from 'next/link'
 import { useChangeRequests } from '@/hooks/useChangeRequests'
 import ChangeRequestRow from '@/components/ChangeRequestRow'
 import OnboardingModal from '@/components/OnboardingModal'
-import { getUserProfile } from '@/app/actions'
+import { getUserProfile, getDelegatedToMeRequests } from '@/app/actions'
 import { DEPARTMENTS, STATUS_OPTIONS, PRIORITY_OPTIONS } from '@/lib/constants'
+import type { ChangeRequest } from '@/lib/supabase/client'
 import type { RequestFilters } from '@/app/actions'
 
 const PAGE_SIZE = 10
@@ -139,9 +140,13 @@ function NewRequestButton({ userProfile }: { userProfile: { department: string |
 
 export default function Dashboard() {
   const [expandedId, setExpandedId] = useState<string | null>(null)
-  const [userProfile, setUserProfile] = useState<{ department: string | null; role: string | null; email?: string | null } | null>(null)
+  const [userProfile, setUserProfile] = useState<{ department: string | null; role: string | null; email?: string | null; full_name?: string | null } | null>(null)
   const [profileLoading, setProfileLoading] = useState(true)
   const [profileError, setProfileError] = useState<string | null>(null)
+  const [delegatedRequests, setDelegatedRequests] = useState<ChangeRequest[]>([])
+  const [delegatedMeta, setDelegatedMeta] = useState<Map<string, { from_user_name: string | null }>>(new Map())
+  const [delegatedLoading, setDelegatedLoading] = useState(true)
+  const [delegatedToast, setDelegatedToast] = useState<string | null>(null)
   const retryCountRef = useRef(0)
 
   const loadProfile = useCallback(async () => {
@@ -180,6 +185,60 @@ export default function Dashboard() {
       return () => clearTimeout(timer)
     }
   }, [profileError, loadProfile])
+
+  useEffect(() => {
+    let isMounted = true
+
+    const fetchDelegated = async () => {
+      if (!userProfile?.email && !userProfile?.full_name) {
+        if (isMounted) {
+          setDelegatedLoading(false)
+          setDelegatedRequests([])
+          setDelegatedMeta(new Map())
+        }
+        return
+      }
+
+      setDelegatedLoading(true)
+      try {
+        const result = await getDelegatedToMeRequests()
+        if (isMounted) {
+          if (result.success) {
+            const requests: ChangeRequest[] = []
+            const meta = new Map<string, { from_user_name: string | null }>()
+
+            for (const item of result.data) {
+              if (item.change_requests) {
+                requests.push(item.change_requests)
+                meta.set(item.change_requests.id, { from_user_name: item.from_user_name })
+              }
+            }
+
+            setDelegatedRequests(requests)
+            setDelegatedMeta(meta)
+
+            if (requests.length > 0) {
+              const requestNumbers = requests.slice(0, 3).map((r) => r.project_number || r.project_name).join(', ')
+              setDelegatedToast(`You have ${requests.length} delegated request${requests.length > 1 ? 's' : ''}: ${requestNumbers}${requests.length > 3 ? '...' : ''}`)
+            }
+          } else {
+            console.error('Failed to load delegated requests:', result.error)
+          }
+        }
+      } catch (err) {
+        if (isMounted) {
+          console.error('Failed to load delegated requests:', err)
+        }
+      } finally {
+        if (isMounted) setDelegatedLoading(false)
+      }
+    }
+
+    fetchDelegated()
+    return () => {
+      isMounted = false
+    }
+  }, [userProfile?.email, userProfile?.full_name])
 
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('All')
@@ -330,6 +389,12 @@ export default function Dashboard() {
             </p>
           </div>
           <div className="flex items-center gap-3">
+            {delegatedRequests.length > 0 && (
+              <span className="inline-flex items-center rounded-full bg-amber-100 dark:bg-amber-900/30 px-2.5 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-400">
+                <span className="mr-1.5 h-1.5 w-1.5 rounded-full bg-amber-400" />
+                {delegatedRequests.length} delegated to you
+              </span>
+            )}
             <span className="inline-flex items-center rounded-full bg-slate-100 dark:bg-zinc-800 px-2.5 py-0.5 text-xs font-medium text-slate-700 dark:text-zinc-300">
               <span className="mr-1.5 h-1.5 w-1.5 rounded-full bg-teal-400" />
               {totalCount} {totalCount === 1 ? 'request' : 'requests'}
@@ -442,6 +507,49 @@ export default function Dashboard() {
           </div>
         </div>
 
+        {!delegatedLoading && delegatedRequests.length > 0 && (
+          <div className="mt-6 rounded-xl border border-amber-200/80 dark:border-amber-900/50 bg-amber-50/50 dark:bg-amber-950/10 p-4 shadow-sm">
+            <div className="flex items-center gap-2 mb-4">
+              <svg className="h-5 w-5 text-amber-600 dark:text-amber-400" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" />
+              </svg>
+              <h2 className="text-sm font-semibold text-amber-900 dark:text-amber-300">Delegated to Me</h2>
+              <span className="inline-flex items-center rounded-full bg-amber-100 dark:bg-amber-900/30 px-2 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-400">
+                {delegatedRequests.length}
+              </span>
+            </div>
+            <div className="grid gap-4">
+              {delegatedRequests.map((req) => {
+                const meta = delegatedMeta.get(req.id)
+                return (
+                  <div key={req.id} className="rounded-lg border border-amber-100 dark:border-amber-900/40 bg-white dark:bg-zinc-900 p-3 shadow-sm">
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mb-2 text-xs text-amber-800 dark:text-amber-300">
+                      {meta?.from_user_name && (
+                        <span>
+                          Delegated by <span className="font-semibold">{meta.from_user_name}</span>
+                        </span>
+                      )}
+                      <span>
+                        Original requester: <span className="font-semibold">{req.initiator_name || req.initiated_by || '—'}</span>
+                      </span>
+                      <span className="text-amber-600 dark:text-amber-400">
+                        {req.project_number ? `Ref: ${req.project_number}` : req.project_name}
+                      </span>
+                    </div>
+                    <ChangeRequestRow
+                      req={{ ...req, project_number: req.project_number ?? null, initiated_by: req.initiated_by ?? null, change_description: req.change_description ?? null, priority_level: req.priority_level ?? null }}
+                      calculateLagHours={calculateLagHours}
+                      expandedId={expandedId}
+                      setExpandedId={setExpandedId}
+                      userProfile={userProfile}
+                    />
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
         {data.length === 0 ? (
           <div className="mt-10 rounded-xl border border-dashed border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-10 text-center">
             <svg className="mx-auto h-16 w-16 text-slate-300 dark:text-zinc-600 mb-4" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
@@ -479,6 +587,29 @@ export default function Dashboard() {
         {toast && (
           <div className="fixed bottom-4 right-4 z-50 rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-4 py-3 shadow-lg" suppressHydrationWarning={true}>
             <p className="text-sm font-medium text-slate-900 dark:text-zinc-100">{toast}</p>
+          </div>
+        )}
+
+        {delegatedToast && (
+          <div className="fixed top-4 right-4 z-50 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 px-4 py-3 shadow-lg max-w-md" suppressHydrationWarning={true}>
+            <div className="flex items-start gap-2">
+              <svg className="h-5 w-5 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" />
+              </svg>
+              <div>
+                <p className="text-sm font-medium text-amber-900 dark:text-amber-300">Delegation Notice</p>
+                <p className="text-xs text-amber-700 dark:text-amber-400 mt-0.5">{delegatedToast}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setDelegatedToast(null)}
+                className="text-amber-400 hover:text-amber-600 dark:hover:text-amber-300 shrink-0"
+              >
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
           </div>
         )}
       </div>
