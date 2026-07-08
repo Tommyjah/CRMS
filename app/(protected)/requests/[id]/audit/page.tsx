@@ -103,7 +103,7 @@ export default function AuditLogPage() {
   }
 
   return (
-    <div className="min-h-screen w-full bg-slate-50 dark:bg-zinc-950 text-slate-900 dark:text-zinc-50 transition-colors duration-200">
+    <div className="min-h-screen w-full bg-slate-50 dark:bg-zinc-950 text-slate-900 dark:text-zinc-50 transition-colors duration-200" suppressHydrationWarning={true}>
       {/* Header */}
       <div className="border-b border-emerald-200 dark:border-emerald-900/70 bg-[#00ab4e] dark:bg-[#008C4A]">
         <div className="mx-auto max-w-5xl px-4 py-4 sm:px-6 lg:px-8">

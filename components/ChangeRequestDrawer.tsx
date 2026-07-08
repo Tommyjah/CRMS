@@ -8,6 +8,7 @@ import { STAGE_STEPS, STAGE_LABELS, APPROVER_FIELD } from '@/lib/constants'
 import AuditTimeline from './AuditTimeline'
 import AttachmentUpload from './AttachmentUpload'
 import AttachmentList from './AttachmentList'
+import { getRequestActivities } from '@/app/actions'
 
 interface ChangeRequestDrawerProps {
   request: ChangeRequest | null
@@ -18,6 +19,8 @@ interface ChangeRequestDrawerProps {
 export default function ChangeRequestDrawer({ request, isOpen, onClose }: ChangeRequestDrawerProps) {
   const [isAnimating, setIsAnimating] = useState(false)
   const [auditLogs, setAuditLogs] = useState<Record<string, RequestAuditLog[]>>({})
+  const [activities, setActivities] = useState<{ serial_number: number; activity: string; unit: string | null; length: number | null; width: number | null; depth: number | null; contract_qty: string | null; executed_qty: string | null; reason: string | null }[]>([])
+  const [isLoadingActivities, setIsLoadingActivities] = useState(false)
 
   useEffect(() => {
     if (isOpen) {
@@ -41,6 +44,32 @@ export default function ChangeRequestDrawer({ request, isOpen, onClose }: Change
         }))
       }
       fetchAuditLogs()
+    }
+  }, [request?.id])
+
+  useEffect(() => {
+    if (!request?.id) return
+    let isMounted = true
+    const fetchActivities = async () => {
+      setIsLoadingActivities(true)
+      try {
+        const { data, error } = await getRequestActivities(request.id)
+        if (!isMounted) return
+        if (error) {
+          console.error('Failed to fetch activities:', error)
+          setActivities([])
+        } else {
+          setActivities(data ?? [])
+        }
+      } catch {
+        if (isMounted) setActivities([])
+      } finally {
+        if (isMounted) setIsLoadingActivities(false)
+      }
+    }
+    fetchActivities()
+    return () => {
+      isMounted = false
     }
   }, [request?.id])
 
@@ -216,9 +245,54 @@ export default function ChangeRequestDrawer({ request, isOpen, onClose }: Change
                       </div>
                     )}
                   </div>
-                </section>
+                 </section>
 
-                {/* Business Impact & Justification */}
+                 {/* Main Activities */}
+                 <section className="space-y-4">
+                   <h3 className="text-sm font-semibold text-slate-900 dark:text-zinc-100">Main Activities</h3>
+                   <div className="overflow-hidden rounded-xl border border-slate-200/80 dark:border-zinc-800/80">
+                     {isLoadingActivities ? (
+                       <div className="p-4 text-sm text-slate-500 dark:text-zinc-400">Loading activities...</div>
+                     ) : activities.length === 0 ? (
+                       <div className="p-4 text-sm text-slate-500 dark:text-zinc-400 italic">No activities recorded.</div>
+                     ) : (
+                       <div className="overflow-x-auto">
+                         <table className="min-w-full divide-y divide-slate-200/80 dark:divide-zinc-800/80">
+                           <thead className="bg-slate-50/50 dark:bg-zinc-800/30">
+                             <tr>
+                               <th className="px-3 py-2 text-left text-xs font-medium text-slate-500 dark:text-zinc-400">S/No</th>
+                               <th className="px-3 py-2 text-left text-xs font-medium text-slate-500 dark:text-zinc-400">Activity</th>
+                               <th className="px-3 py-2 text-left text-xs font-medium text-slate-500 dark:text-zinc-400">Unit</th>
+                               <th className="px-3 py-2 text-left text-xs font-medium text-slate-500 dark:text-zinc-400">L (m)</th>
+                               <th className="px-3 py-2 text-left text-xs font-medium text-slate-500 dark:text-zinc-400">W (m)</th>
+                               <th className="px-3 py-2 text-left text-xs font-medium text-slate-500 dark:text-zinc-400">D (m)</th>
+                               <th className="px-3 py-2 text-left text-xs font-medium text-slate-500 dark:text-zinc-400">Contract Qty</th>
+                               <th className="px-3 py-2 text-left text-xs font-medium text-slate-500 dark:text-zinc-400">Executed Qty</th>
+                               <th className="px-3 py-2 text-left text-xs font-medium text-slate-500 dark:text-zinc-400">Reason</th>
+                             </tr>
+                           </thead>
+                           <tbody className="divide-y divide-slate-200/50 dark:divide-zinc-800/50 bg-white dark:bg-zinc-900">
+                             {activities.map((act) => (
+                               <tr key={act.serial_number}>
+                                 <td className="whitespace-nowrap px-3 py-2 text-sm text-slate-600 dark:text-zinc-300">{act.serial_number}</td>
+                                 <td className="px-3 py-2 text-sm text-slate-700 dark:text-zinc-300">{act.activity || '—'}</td>
+                                 <td className="px-3 py-2 text-sm text-slate-700 dark:text-zinc-300">{act.unit || '—'}</td>
+                                 <td className="px-3 py-2 text-sm text-slate-700 dark:text-zinc-300">{act.length != null ? act.length : '—'}</td>
+                                 <td className="px-3 py-2 text-sm text-slate-700 dark:text-zinc-300">{act.width != null ? act.width : '—'}</td>
+                                 <td className="px-3 py-2 text-sm text-slate-700 dark:text-zinc-300">{act.depth != null ? act.depth : '—'}</td>
+                                 <td className="px-3 py-2 text-sm text-slate-700 dark:text-zinc-300">{act.contract_qty || '—'}</td>
+                                 <td className="px-3 py-2 text-sm text-slate-700 dark:text-zinc-300">{act.executed_qty || '—'}</td>
+                                 <td className="px-3 py-2 text-sm text-slate-700 dark:text-zinc-300">{act.reason || '—'}</td>
+                               </tr>
+                             ))}
+                           </tbody>
+                         </table>
+                       </div>
+                     )}
+                   </div>
+                 </section>
+
+                 {/* Business Impact & Justification */}
                 <section className="space-y-4">
                   <h3 className="text-sm font-semibold text-slate-900 dark:text-zinc-100">Business Impact & Justification</h3>
                   <div className="rounded-lg border border-slate-200/80 dark:border-zinc-800/80 bg-slate-50/30 dark:bg-zinc-800/20 p-4 space-y-4">

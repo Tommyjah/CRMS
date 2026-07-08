@@ -117,6 +117,10 @@ export const APPROVER_FIELD: Record<string, keyof Database['public']['Tables']['
   PENDING_DEPT_3: 'engineering_approver',
 }
 
+// Activity unit options for dropdown
+export const UNIT_OPTIONS = ['M³', 'Linear Meter', 'Pcs', 'Kg', 'Bag', 'Set', 'Pair', 'Liters', 'M²', 'Ton', 'Box', 'Roll', 'Each', 'Lot', 'm', 'mm'] as const
+export type UnitOption = (typeof UNIT_OPTIONS)[number]
+
 // PDF color coding (used by generatePdf)
 export const STATUS_PDF_COLORS: Record<Status, [number, number, number]> = {
   DRAFT: [100, 116, 139],

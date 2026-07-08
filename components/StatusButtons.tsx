@@ -5,6 +5,7 @@ import { updateRequestStatus } from '@/app/actions'
 import { isDepartmentResponsible } from '@/lib/security-constants'
 import { isStatus, isRole } from '@/lib/constants'
 import DelegateModal from './DelegateModal'
+import EscalateModal from './EscalateModal'
 
 type StatusButtonsProps = {
   requestId: string
@@ -28,6 +29,7 @@ export default function StatusButtons({ requestId, status, userProfile, onSucces
   const [showRejectReason, setShowRejectReason] = useState(false)
   const [rejectReason, setRejectReason] = useState('')
   const [showDelegateModal, setShowDelegateModal] = useState(false)
+  const [showEscalateModal, setShowEscalateModal] = useState(false)
 
   const handleStatusUpdate = useCallback(async (action: 'APPROVE' | 'REJECT') => {
     setLoading(true)
@@ -59,6 +61,11 @@ export default function StatusButtons({ requestId, status, userProfile, onSucces
   const handleDelegateSuccess = useCallback(() => {
     onSuccess?.()
     setShowDelegateModal(false)
+  }, [onSuccess])
+
+  const handleEscalateSuccess = useCallback(() => {
+    onSuccess?.()
+    setShowEscalateModal(false)
   }, [onSuccess])
 
   if (FINAL_STATUSES.includes(status ?? '')) return null
@@ -124,6 +131,20 @@ export default function StatusButtons({ requestId, status, userProfile, onSucces
             Delegate
           </button>
         )}
+        {canDelegate && (
+          <button
+            type="button"
+            onClick={() => setShowEscalateModal(true)}
+            disabled={loading}
+            title="Escalate this approval to a higher authority"
+            className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-all bg-orange-600 text-white hover:bg-orange-700 shadow-sm disabled:opacity-50"
+          >
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 19.5v-15m0 0l-6.75 6.75M12 4.5l6.75 6.75" />
+            </svg>
+            Escalate
+          </button>
+        )}
       </div>
 
       {showRejectReason && (
@@ -170,6 +191,12 @@ export default function StatusButtons({ requestId, status, userProfile, onSucces
         onClose={() => setShowDelegateModal(false)}
         requestId={requestId}
         onSuccess={handleDelegateSuccess}
+      />
+      <EscalateModal
+        isOpen={showEscalateModal}
+        onClose={() => setShowEscalateModal(false)}
+        requestId={requestId}
+        onSuccess={handleEscalateSuccess}
       />
     </div>
   )

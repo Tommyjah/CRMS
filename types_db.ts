@@ -178,37 +178,46 @@ export type Database = {
           activity: string;
           contract_qty: string | null;
           created_at: string | null;
+          depth: number | null;
           executed_qty: string | null;
           id: string;
+          length: number | null;
           reason: string | null;
           request_id: string;
           serial_number: number;
           unit: string | null;
           updated_at: string | null;
+          width: number | null;
         };
         Insert: {
           activity: string;
           contract_qty?: string | null;
           created_at?: string | null;
+          depth?: number | null;
           executed_qty?: string | null;
           id?: string;
+          length?: number | null;
           reason?: string | null;
           request_id: string;
           serial_number: number;
           unit?: string | null;
           updated_at?: string | null;
+          width?: number | null;
         };
         Update: {
           activity?: string;
           contract_qty?: string | null;
           created_at?: string | null;
+          depth?: number | null;
           executed_qty?: string | null;
           id?: string;
+          length?: number | null;
           reason?: string | null;
           request_id?: string;
           serial_number?: number;
           unit?: string | null;
           updated_at?: string | null;
+          width?: number | null;
         };
         Relationships: [
           {

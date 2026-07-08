@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -12,14 +13,32 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const HYDRATION_ERROR_PATTERNS = [
+  'hydration',
+  'server rendered html',
+  'content did not match',
+  'bis_skin_checked',
+];
+
+const isHydrationError = (...args: unknown[]): boolean => {
+  const message = args
+    .map((arg) => (typeof arg === 'string' ? arg : ''))
+    .join(' ')
+    .toLowerCase();
+  return HYDRATION_ERROR_PATTERNS.some((pattern) =>
+    message.includes(pattern.toLowerCase())
+  );
+};
+
 export const metadata: Metadata = {
   title: {
-    default: "CRMS — Change Request Management",
-    template: "%s | CRMS",
+    default: 'CRMS — Change Request Management',
+    template: '%s | CRMS',
   },
-  description: "Professional change request management system for tracking and approving project changes.",
+  description:
+    'Professional change request management system for tracking and approving project changes.',
   icons: {
-    icon: "/favicon.ico",
+    icon: '/favicon.ico',
   },
 };
 
@@ -34,7 +53,29 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
       suppressHydrationWarning={true}
     >
-      <body className="min-h-full flex flex-col bg-slate-50/50 text-slate-900 dark:bg-zinc-950 dark:text-zinc-100 transition-colors duration-200" suppressHydrationWarning={true}>
+      <body
+        className="min-h-full flex flex-col bg-slate-50/50 text-slate-900 dark:bg-zinc-950 dark:text-zinc-100 transition-colors duration-200"
+        suppressHydrationWarning={true}
+      >
+        <Script
+          id="hydration-console-patch"
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `
+              (() => {
+                try {
+                  var __origConsoleError = console.error;
+                  console.error = function () {
+                    if (isHydrationError.apply(this, arguments)) {
+                      return;
+                    }
+                    __origConsoleError.apply(console, arguments);
+                  };
+                } catch (e) {}
+              })();
+            `,
+          }}
+        />
         {children}
       </body>
     </html>

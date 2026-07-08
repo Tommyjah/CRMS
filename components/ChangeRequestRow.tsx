@@ -23,6 +23,9 @@ type RequestActivityForPdf = {
   serial_number: number
   activity: string
   unit: string | null
+  length: number | null
+  width: number | null
+  depth: number | null
   contract_qty: string | null
   executed_qty: string | null
   reason: string | null
@@ -254,6 +257,9 @@ export default function ChangeRequestRow({
         serial_number: activity.serial_number,
         activity: activity.activity,
         unit: activity.unit ?? '—',
+        length: activity.length ?? null,
+        width: activity.width ?? null,
+        depth: activity.depth ?? null,
         contract_qty: Number(activity.contract_qty) || 0,
         executed_qty: Number(activity.executed_qty) || 0,
         reason: activity.reason ?? '—',

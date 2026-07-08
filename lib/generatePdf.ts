@@ -7,6 +7,9 @@ export interface Activity {
   serial_number: number
   activity: string
   unit: string | null
+  length: number | null
+  width: number | null
+  depth: number | null
   contract_qty: number
   executed_qty: number
   reason: string | null
@@ -231,7 +234,7 @@ export async function generatePdf(request: RequestData, activities: Activity[]) 
     doc.text('Main Activities', margin, currentY)
     currentY += 2
 
-    const tableHeaders = [['S/No', 'Main Activity', 'Unit', 'Contract Qty', 'Executed Qty', 'Difference', 'Reason']]
+    const tableHeaders = [['S/No', 'Main Activity', 'Unit', 'L(m)', 'W(m)', 'D(m)', 'Contract Qty', 'Executed Qty', 'Difference', 'Reason']]
     const tableRows = activities.map((act, index) => {
       const contractQty = Number(act.contract_qty) || 0
       const executedQty = Number(act.executed_qty) || 0
@@ -240,6 +243,9 @@ export async function generatePdf(request: RequestData, activities: Activity[]) 
         String(index + 1),
         act.activity || '—',
         act.unit || '—',
+        act.length != null ? String(act.length) : '—',
+        act.width != null ? String(act.width) : '—',
+        act.depth != null ? String(act.depth) : '—',
         contractQty.toLocaleString(),
         executedQty.toLocaleString(),
         diff.toLocaleString(),
@@ -266,13 +272,16 @@ export async function generatePdf(request: RequestData, activities: Activity[]) 
         cellPadding: 1.5,
       },
       columnStyles: {
-        0: { halign: 'center', cellWidth: 14 },
-        1: { halign: 'left', cellWidth: 45 },
-        2: { halign: 'center', cellWidth: 18 },
-        3: { halign: 'right', cellWidth: 28 },
-        4: { halign: 'right', cellWidth: 28 },
-        5: { halign: 'right', cellWidth: 28 },
-        6: { halign: 'left', cellWidth: 45 },
+        0: { halign: 'center', cellWidth: 9 },
+        1: { halign: 'left', cellWidth: 28 },
+        2: { halign: 'center', cellWidth: 14 },
+        3: { halign: 'center', cellWidth: 14 },
+        4: { halign: 'center', cellWidth: 14 },
+        5: { halign: 'center', cellWidth: 14 },
+        6: { halign: 'right', cellWidth: 22 },
+        7: { halign: 'right', cellWidth: 22 },
+        8: { halign: 'right', cellWidth: 22 },
+        9: { halign: 'left', cellWidth: 28 },
       },
       margin: { left: margin, right: margin },
     })

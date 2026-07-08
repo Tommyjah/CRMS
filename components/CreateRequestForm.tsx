@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createChangeRequest } from '@/app/actions'
-import { PRIORITY_LEVELS } from '@/lib/constants'
+import { PRIORITY_LEVELS, UNIT_OPTIONS } from '@/lib/constants'
 import AttachmentUpload from './AttachmentUpload'
 
 type ActivityRow = {
@@ -11,6 +11,9 @@ type ActivityRow = {
   serialNumber: number
   activity: string
   unit: string
+  length: string
+  width: string
+  depth: string
   contractQty: string
   executedQty: string
   reason: string
@@ -54,6 +57,9 @@ export default function CreateRequestForm({ userProfile }: CreateRequestFormProp
       serialNumber: 1,
       activity: '',
       unit: '',
+      length: '',
+      width: '',
+      depth: '',
       contractQty: '',
       executedQty: '',
       reason: '',
@@ -97,6 +103,9 @@ const [technicalSpec, setTechnicalSpec] = useState<TechnicalSpec>({
         serialNumber: prev.length + 1,
         activity: '',
         unit: '',
+        length: '',
+        width: '',
+        depth: '',
         contractQty: '',
         executedQty: '',
         reason: '',
@@ -132,6 +141,9 @@ const [technicalSpec, setTechnicalSpec] = useState<TechnicalSpec>({
         serial_number: row.serialNumber,
         activity: row.activity,
         unit: row.unit,
+        length: row.length ? Number(row.length) : null,
+        width: row.width ? Number(row.width) : null,
+        depth: row.depth ? Number(row.depth) : null,
         contract_qty: row.contractQty,
         executed_qty: row.executedQty,
         reason: row.reason,
@@ -436,6 +448,9 @@ const [technicalSpec, setTechnicalSpec] = useState<TechnicalSpec>({
                         <th className="px-3 py-2 text-left text-xs font-medium text-slate-500 dark:text-zinc-400">S/No</th>
                         <th className="px-3 py-2 text-left text-xs font-medium text-slate-500 dark:text-zinc-400">Activity</th>
                         <th className="px-3 py-2 text-left text-xs font-medium text-slate-500 dark:text-zinc-400">Unit</th>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-slate-500 dark:text-zinc-400">L (m)</th>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-slate-500 dark:text-zinc-400">W (m)</th>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-slate-500 dark:text-zinc-400">D (m)</th>
                         <th className="px-3 py-2 text-left text-xs font-medium text-slate-500 dark:text-zinc-400">Contract Qty</th>
                         <th className="px-3 py-2 text-left text-xs font-medium text-slate-500 dark:text-zinc-400">Executed Qty</th>
                         <th className="px-3 py-2 text-left text-xs font-medium text-slate-500 dark:text-zinc-400">Reason</th>
@@ -460,11 +475,51 @@ const [technicalSpec, setTechnicalSpec] = useState<TechnicalSpec>({
                           </td>
 
                           <td className="px-3 py-2">
-                            <input
-                              type="text"
+                            <select
                               value={row.unit}
                               onChange={(e) => updateActivity(row.id, { unit: e.target.value })}
                               className="w-full rounded-md border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-100 px-2 py-1 text-sm focus:border-teal-500 focus:ring-1 focus:ring-teal-500/20 transition-all outline-none"
+                            >
+                              <option value="">Select</option>
+                              {UNIT_OPTIONS.map((u) => (
+                                <option key={u} value={u}>{u}</option>
+                              ))}
+                            </select>
+                          </td>
+
+                          <td className="px-3 py-2">
+                            <input
+                              type="number"
+                              min="0"
+                              step="any"
+                              value={row.length}
+                              onChange={(e) => updateActivity(row.id, { length: e.target.value })}
+                              className="w-20 rounded-md border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-100 px-2 py-1 text-sm focus:border-teal-500 focus:ring-1 focus:ring-teal-500/20 transition-all outline-none"
+                              placeholder="0"
+                            />
+                          </td>
+
+                          <td className="px-3 py-2">
+                            <input
+                              type="number"
+                              min="0"
+                              step="any"
+                              value={row.width}
+                              onChange={(e) => updateActivity(row.id, { width: e.target.value })}
+                              className="w-20 rounded-md border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-100 px-2 py-1 text-sm focus:border-teal-500 focus:ring-1 focus:ring-teal-500/20 transition-all outline-none"
+                              placeholder="0"
+                            />
+                          </td>
+
+                          <td className="px-3 py-2">
+                            <input
+                              type="number"
+                              min="0"
+                              step="any"
+                              value={row.depth}
+                              onChange={(e) => updateActivity(row.id, { depth: e.target.value })}
+                              className="w-20 rounded-md border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-100 px-2 py-1 text-sm focus:border-teal-500 focus:ring-1 focus:ring-teal-500/20 transition-all outline-none"
+                              placeholder="0"
                             />
                           </td>
 

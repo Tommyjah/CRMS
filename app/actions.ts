@@ -53,12 +53,12 @@ type ExtraFields = {
   }
 
 export async function logRequestActivity(
-   requestId: string,
-   action: 'CREATE' | 'APPROVE' | 'REJECT' | 'DELEGATE',
-   previousStatus: string | null,
-   newStatus: string | null,
-   comment?: string | null
- ) {
+    requestId: string,
+    action: 'CREATE' | 'APPROVE' | 'REJECT' | 'DELEGATE' | 'ESCALATE',
+    previousStatus: string | null,
+    newStatus: string | null,
+    comment?: string | null
+  ) {
    const supabase = await createClient()
 
    const { data: { user } } = await supabase.auth.getUser()
@@ -121,7 +121,7 @@ type CreateChangeRequestInput = {
  */
 export async function createChangeRequest(
   formData: FormData,
-  activities: { serial_number: number; activity: string; unit: string; contract_qty: string; executed_qty: string; reason: string }[],
+  activities: { serial_number: number; activity: string; unit: string; length: number | null; width: number | null; depth: number | null; contract_qty: string; executed_qty: string; reason: string }[],
   extraFields: ExtraFields = {}
 ) {
   const { profile, user, error: authError } = await getCurrentProfile()
@@ -220,8 +220,16 @@ export async function createChangeRequest(
 
    if (data && activities.length > 0) {
     const activitiesPayload: Database['public']['Tables']['request_activities']['Insert'][] = activities.map((activity) => ({
-      ...activity,
       request_id: data.id,
+      serial_number: activity.serial_number,
+      activity: activity.activity,
+      unit: activity.unit,
+      length: activity.length,
+      width: activity.width,
+      depth: activity.depth,
+      contract_qty: activity.contract_qty,
+      executed_qty: activity.executed_qty,
+      reason: activity.reason,
     }))
 
     const { error: activitiesError } = await supabase
@@ -246,7 +254,7 @@ export async function getRequestActivities(requestId: string) {
 
   const { data, error } = await supabase
     .from('request_activities')
-    .select('serial_number, activity, unit, contract_qty, executed_qty, reason')
+    .select('serial_number, activity, unit, length, width, depth, contract_qty, executed_qty, reason')
     .eq('request_id', requestId)
     .order('serial_number', { ascending: true })
 
@@ -431,6 +439,58 @@ export async function delegateApproval(requestId: string, delegateTo: string) {
 
   revalidatePath('/')
   return { success: true, message: `Approval delegated to ${trimmedDelegateTo}` }
+}
+
+/**
+ * Escalates the current request to a higher authority.
+ * Accepts a free-text name/email for the escalation target.
+ * Does not change the request status; only logs the escalation in the audit trail.
+ */
+export async function escalateApproval(requestId: string, escalatedTo: string) {
+  const supabase = await createClient()
+  const { profile, user, error: authError } = await getCurrentProfile()
+
+  if (authError || !user || !profile) {
+    logAuthFailure('unknown', 'ESCALATE', 'Not authenticated')
+    return { success: false, error: toErrorString(authError, 'Not authenticated') }
+  }
+
+  const { data: request, error: requestError } = await supabase
+    .from('change_requests')
+    .select('status')
+    .eq('id', requestId)
+    .single()
+
+  if (requestError || !request) {
+    logAuthFailure(user.id, 'ESCALATE', 'Request not found', { requestId })
+    return { success: false, error: 'Change request ticket not found.' }
+  }
+
+  if (!isStatus(request.status)) {
+    logAuthFailure(user.id, 'ESCALATE', 'Invalid status for escalation', { status: request.status })
+    return { success: false, error: 'This ticket is not active or has already reached a finalized state.' }
+  }
+
+  if (request.status === 'APPROVED' || request.status === 'REJECTED') {
+    logAuthFailure(user.id, 'ESCALATE', 'Request already finalized', { status: request.status })
+    return { success: false, error: 'This request has already been finalized and cannot be escalated.' }
+  }
+
+  const trimmedEscalatedTo = escalatedTo.trim()
+  if (!trimmedEscalatedTo) {
+    return { success: false, error: 'Please enter a name or email for the escalation target.' }
+  }
+
+  await logRequestActivity(
+    requestId,
+    'ESCALATE',
+    request.status,
+    request.status,
+    `Escalated to ${trimmedEscalatedTo}`
+  )
+
+  revalidatePath('/')
+  return { success: true, message: `Request escalated to ${trimmedEscalatedTo}` }
 }
 
 /**

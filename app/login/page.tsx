@@ -154,7 +154,7 @@ export default function UnifiedPage() {
   }
 
   if (checkingAuth) {
-    return <div className="min-h-screen bg-slate-50/50 dark:bg-zinc-950 flex items-center justify-center text-slate-500 dark:text-zinc-400 text-sm">Verifying system session...</div>
+    return <div className="min-h-screen bg-slate-50/50 dark:bg-zinc-950 flex items-center justify-center text-slate-500 dark:text-zinc-400 text-sm" suppressHydrationWarning={true}>Verifying system session...</div>
   }
 
   if (!session) {
@@ -265,7 +265,7 @@ export default function UnifiedPage() {
   }
 
   return (
-    <div className="min-h-screen w-full bg-slate-50/50 dark:bg-zinc-950 text-slate-900 dark:text-zinc-50 transition-colors duration-200">
+    <div className="min-h-screen w-full bg-slate-50/50 dark:bg-zinc-950 text-slate-900 dark:text-zinc-50 transition-colors duration-200" suppressHydrationWarning={true}>
       <OnboardingModal />
       <header className="border-b border-slate-200/80 dark:border-zinc-800/80 pb-4 flex justify-between items-center max-w-5xl mx-auto px-4 pt-6">
         <div>
