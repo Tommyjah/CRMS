@@ -7,7 +7,7 @@
 import type { Database } from '@/types_db'
 
 // Request lifecycle statuses
-export const REQUEST_STATUSES = ['DRAFT','PENDING_DEPT_1','PENDING_DEPT_2','PENDING_DEPT_3','APPROVED','REJECTED'] as const
+export const REQUEST_STATUSES = ['DRAFT','PENDING_DEPT_1','PENDING_DEPT_2','PENDING_DEPT_3','PENDING_INITIATOR_REVIEW','APPROVED','REJECTED'] as const
 export type Status = (typeof REQUEST_STATUSES)[number]
 
 // Departments in the approval pipeline (ordered by flow)
@@ -28,6 +28,7 @@ export const STATUS_DEPARTMENT_MAP: Record<Status, string | null> = {
   PENDING_DEPT_1: 'Fixed Network',
   PENDING_DEPT_2: 'Wire Line Planning',
   PENDING_DEPT_3: 'Engineering',
+  PENDING_INITIATOR_REVIEW: null,
   APPROVED: null,
   REJECTED: null,
 }
@@ -37,6 +38,7 @@ export const STATUS_LABELS: Record<Status, string> = {
   PENDING_DEPT_1: 'Fixed Network Review',
   PENDING_DEPT_2: 'Wire Line Planning Review',
   PENDING_DEPT_3: 'Engineering Review',
+  PENDING_INITIATOR_REVIEW: 'Back to Initiator',
   APPROVED: 'Approved',
   REJECTED: 'Rejected',
 }
@@ -68,6 +70,7 @@ export const STATUS_OPTIONS: { value: Status | 'All'; label: string }[] = [
   { value: 'PENDING_DEPT_1', label: 'Fixed Network Review' },
   { value: 'PENDING_DEPT_2', label: 'Wire Line Planning Review' },
   { value: 'PENDING_DEPT_3', label: 'Engineering Review' },
+  { value: 'PENDING_INITIATOR_REVIEW', label: 'Back to Initiator' },
   { value: 'APPROVED', label: 'Approved' },
   { value: 'REJECTED', label: 'Rejected' },
 ]
@@ -86,6 +89,7 @@ export const STATUS_STYLES: Record<Status, string> = {
   PENDING_DEPT_1: 'bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/20 dark:text-amber-400 dark:border-amber-800/50',
   PENDING_DEPT_2: 'bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/20 dark:text-amber-400 dark:border-amber-800/50',
   PENDING_DEPT_3: 'bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/20 dark:text-amber-400 dark:border-amber-800/50',
+  PENDING_INITIATOR_REVIEW: 'bg-orange-50 text-orange-700 border border-orange-200 dark:bg-orange-950/20 dark:text-orange-400 dark:border-orange-800/50',
   APPROVED: 'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-800/50',
   REJECTED: 'bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/20 dark:text-rose-400 dark:border-rose-800/50',
 }
@@ -95,6 +99,7 @@ export const STATUS_DOT_COLORS: Record<Status, string> = {
   PENDING_DEPT_1: 'bg-amber-500',
   PENDING_DEPT_2: 'bg-amber-500',
   PENDING_DEPT_3: 'bg-amber-500',
+  PENDING_INITIATOR_REVIEW: 'bg-orange-500',
   APPROVED: 'bg-emerald-500',
   REJECTED: 'bg-rose-500',
 }
@@ -127,6 +132,7 @@ export const STATUS_PDF_COLORS: Record<Status, [number, number, number]> = {
   PENDING_DEPT_1: [216, 133, 21],
   PENDING_DEPT_2: [216, 133, 21],
   PENDING_DEPT_3: [216, 133, 21],
+  PENDING_INITIATOR_REVIEW: [234, 88, 12],
   APPROVED: [46, 125, 50],
   REJECTED: [198, 40, 40],
 }

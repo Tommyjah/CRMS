@@ -3,8 +3,13 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { getRequestAuditLogs } from '@/app/actions'
-import type { RequestAuditLog } from '@/lib/supabase/client'
+import type { Database } from '@/types_db'
 import { STATUS_LABELS } from '@/lib/constants'
+
+type EnrichedAuditLog = Database['public']['Tables']['request_audit_log']['Row'] & {
+  changed_by_name: string | null
+  changed_by_email: string | null
+}
 
 type ActionType = 'ALL' | 'CREATE' | 'APPROVE' | 'REJECT'
 
@@ -13,7 +18,7 @@ export default function AuditLogPage() {
   const router = useRouter()
   const requestId = params.id as string
 
-  const [logs, setLogs] = useState<RequestAuditLog[]>([])
+  const [logs, setLogs] = useState<EnrichedAuditLog[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [actionFilter, setActionFilter] = useState<ActionType>('ALL')
@@ -235,7 +240,12 @@ export default function AuditLogPage() {
                         <tr key={log.id} className="hover:bg-slate-50/80 dark:hover:bg-zinc-800/60 transition-colors">
                           <td className="px-4 py-3 text-slate-500 dark:text-zinc-400">{idx + 1}</td>
                           <td className="px-4 py-3 text-slate-700 dark:text-zinc-300 whitespace-nowrap">{formatDateTime(log.timestamp)}</td>
-                          <td className="px-4 py-3 text-slate-700 dark:text-zinc-300">{log.changed_by || 'SYSTEM'}</td>
+                          <td className="px-4 py-3 text-slate-700 dark:text-zinc-300">
+                            {(log as EnrichedAuditLog).changed_by_name ||
+                              (log as EnrichedAuditLog).changed_by_email ||
+                              log.changed_by ||
+                              'SYSTEM'}
+                          </td>
                           <td className="px-4 py-3">
                             <span
                               className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${

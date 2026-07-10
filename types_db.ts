@@ -15,11 +15,14 @@ export type Database = {
       change_requests: {
         Row: {
           change_description: string | null;
+          change_number: string | null;
+          change_type: string | null;
           created_at: string | null;
           description: string | null;
           duct_sizes: string | null;
           estimated_downtime: string | null;
           engineering_approver: string | null;
+          fixed_network_approver: string | null;
           id: string;
           initiated_by: string | null;
           initiator_name: string;
@@ -33,12 +36,10 @@ export type Database = {
           status: string | null;
           technical_reason: string | null;
           updated_at: string | null;
-          fixed_network_approver: string | null;
+          user_id: string;
           wire_line_approver: string | null;
           target_segments: string | null;
           work_order: string | null;
-          change_number: string | null;
-          change_type: string | null;
         };
         Insert: {
           change_description?: string | null;
@@ -66,6 +67,7 @@ export type Database = {
           work_order?: string | null;
           change_number?: string | null;
           change_type?: string | null;
+          user_id?: string;
         };
         Update: {
           change_description?: string | null;

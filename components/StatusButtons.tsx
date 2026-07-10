@@ -14,16 +14,18 @@ type StatusButtonsProps = {
     department: string | null
     role: string | null
     email?: string | null
+    full_name?: string | null
     id?: string | null
   } | null
   onSuccess?: () => void
   onRejected?: () => void
   approverEmail?: string | null
+  initiatorName?: string | null
 }
 
 const FINAL_STATUSES: readonly string[] = ['APPROVED', 'REJECTED', 'DRAFT']
 
-export default function StatusButtons({ requestId, status, userProfile, onSuccess, onRejected, approverEmail }: StatusButtonsProps) {
+export default function StatusButtons({ requestId, status, userProfile, onSuccess, onRejected, approverEmail, initiatorName }: StatusButtonsProps) {
   const [loading, setLoading] = useState(false)
   const [localError, setLocalError] = useState<string | null>(null)
   const [showRejectReason, setShowRejectReason] = useState(false)
@@ -72,6 +74,11 @@ export default function StatusButtons({ requestId, status, userProfile, onSucces
 
   const isApprover = isRole(userProfile?.role) && userProfile.role === 'APPROVER'
 
+  const isInitiator =
+    !!initiatorName &&
+    !!userProfile?.full_name &&
+    initiatorName.trim().toLowerCase() === userProfile.full_name.trim().toLowerCase()
+
   const safeStatus = isStatus(status) ? status : null
   const isResponsible = safeStatus !== null && isDepartmentResponsible(safeStatus, userProfile?.department ?? null)
   const isAssignedApprover =
@@ -79,8 +86,15 @@ export default function StatusButtons({ requestId, status, userProfile, onSucces
     !!approverEmail?.trim().toLowerCase() &&
     userProfile.email.trim().toLowerCase() === approverEmail.trim().toLowerCase()
 
-  const canTakeAction = isApprover && (isResponsible || isAssignedApprover)
-  const canDelegate = canTakeAction && userProfile?.id
+  const approverCanAct = isApprover && (isResponsible || isAssignedApprover)
+  const initiatorCanAct = isInitiator && safeStatus === 'PENDING_INITIATOR_REVIEW'
+  const canTakeAction = approverCanAct || initiatorCanAct
+  const canDelegate = approverCanAct && userProfile?.id
+
+  const approverCanReject = isApprover && (isResponsible || isAssignedApprover)
+  const initiatorCanReject =
+    isInitiator && safeStatus !== 'APPROVED' && safeStatus !== 'REJECTED' && safeStatus !== 'DRAFT'
+  const canReject = approverCanReject || initiatorCanReject
 
   return (
     <div className="flex flex-col gap-1.5">
@@ -104,8 +118,8 @@ export default function StatusButtons({ requestId, status, userProfile, onSucces
         <button
           type="button"
           onClick={() => setShowRejectReason(prev => !prev)}
-          disabled={loading || !canTakeAction}
-          title={!canTakeAction ? 'You are not authorized to reject this request' : undefined}
+          disabled={loading || !canReject}
+          title={!canReject ? 'You are not authorized to reject this request' : undefined}
           className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-all ${
             canTakeAction && !loading
               ? 'bg-rose-600 text-white hover:bg-rose-700 shadow-sm'

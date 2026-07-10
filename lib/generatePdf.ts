@@ -4,15 +4,15 @@ import { REQUEST_STATUSES, STATUS_PDF_COLORS } from './constants'
 import type { ChangeRequest } from '@/lib/supabase/client'
 
 export interface Activity {
-  serial_number: number
-  activity: string
-  unit: string | null
-  length: number | null
-  width: number | null
-  depth: number | null
-  contract_qty: number
-  executed_qty: number
-  reason: string | null
+  serial_number: number;
+  activity: string;
+  unit: string | null;
+  length: number | null;
+  width: number | null;
+  depth: number | null;
+  contract_qty: number;
+  executed_qty: number;
+  reason: string | null;
 }
 
 export interface RequestData {

@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { useChangeRequests } from '@/hooks/useChangeRequests'
 import ChangeRequestRow from '@/components/ChangeRequestRow'
 import OnboardingModal from '@/components/OnboardingModal'
-import { getUserProfile, getDelegatedToMeRequests } from '@/app/actions'
+import { getUserProfile, getDelegatedToMeRequests, getMyPendingCorrections } from '@/app/actions'
 import { DEPARTMENTS, STATUS_OPTIONS, PRIORITY_OPTIONS } from '@/lib/constants'
 import type { ChangeRequest } from '@/lib/supabase/client'
 import type { RequestFilters } from '@/app/actions'
@@ -140,13 +140,15 @@ function NewRequestButton({ userProfile }: { userProfile: { department: string |
 
 export default function Dashboard() {
   const [expandedId, setExpandedId] = useState<string | null>(null)
-  const [userProfile, setUserProfile] = useState<{ department: string | null; role: string | null; email?: string | null; full_name?: string | null } | null>(null)
+  const [userProfile, setUserProfile] = useState<{ department: string | null; role: string | null; email?: string | null; full_name?: string | null; id?: string | null } | null>(null)
   const [profileLoading, setProfileLoading] = useState(true)
   const [profileError, setProfileError] = useState<string | null>(null)
   const [delegatedRequests, setDelegatedRequests] = useState<ChangeRequest[]>([])
   const [delegatedMeta, setDelegatedMeta] = useState<Map<string, { from_user_name: string | null }>>(new Map())
   const [delegatedLoading, setDelegatedLoading] = useState(true)
   const [delegatedToast, setDelegatedToast] = useState<string | null>(null)
+  const [pendingCorrections, setPendingCorrections] = useState<ChangeRequest[]>([])
+  const [pendingCorrectionsLoading, setPendingCorrectionsLoading] = useState(true)
   const retryCountRef = useRef(0)
 
   const loadProfile = useCallback(async () => {
@@ -239,6 +241,35 @@ export default function Dashboard() {
       isMounted = false
     }
   }, [userProfile?.email, userProfile?.full_name])
+
+  useEffect(() => {
+    let isMounted = true
+
+    const fetchPendingCorrections = async () => {
+      setPendingCorrectionsLoading(true)
+      try {
+        const result = await getMyPendingCorrections()
+        if (isMounted) {
+          if (result.success) {
+            setPendingCorrections(result.data)
+          } else {
+            console.error('Failed to load pending corrections:', result.error)
+          }
+        }
+      } catch (err) {
+        if (isMounted) {
+          console.error('Failed to load pending corrections:', err)
+        }
+      } finally {
+        if (isMounted) setPendingCorrectionsLoading(false)
+      }
+    }
+
+    fetchPendingCorrections()
+    return () => {
+      isMounted = false
+    }
+  }, [userProfile?.id])
 
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('All')
@@ -546,6 +577,33 @@ export default function Dashboard() {
                   </div>
                 )
               })}
+            </div>
+          </div>
+        )}
+
+        {!pendingCorrectionsLoading && pendingCorrections.length > 0 && (
+          <div className="mt-6 rounded-xl border border-orange-200/80 dark:border-orange-900/50 bg-orange-50/50 dark:bg-orange-950/10 p-4 shadow-sm">
+            <div className="flex items-center gap-2 mb-4">
+              <svg className="h-5 w-5 text-orange-600 dark:text-orange-400" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348c4.887.444 4.5 2.85-4.5 3.44M16.023 9.348l3.86-3.86m-3.86 3.86l-3.86 3.86m12.728 0l3.86-3.86m-3.86 3.86l-3.86 3.86M3.75 9.348c-4.887.444-4.5 2.85 4.5 3.44" />
+              </svg>
+              <h2 className="text-sm font-semibold text-orange-900 dark:text-orange-300">My Pending Corrections</h2>
+              <span className="inline-flex items-center rounded-full bg-orange-100 dark:bg-orange-900/30 px-2 py-0.5 text-xs font-medium text-orange-700 dark:text-orange-400">
+                {pendingCorrections.length}
+              </span>
+            </div>
+            <div className="grid gap-4">
+              {pendingCorrections.map((req) => (
+                <div key={req.id} className="rounded-lg border border-orange-100 dark:border-orange-900/40 bg-white dark:bg-zinc-900 p-3 shadow-sm">
+                  <ChangeRequestRow
+                    req={{ ...req, project_number: req.project_number ?? null, initiated_by: req.initiated_by ?? null, change_description: req.change_description ?? null, priority_level: req.priority_level ?? null }}
+                    calculateLagHours={calculateLagHours}
+                    expandedId={expandedId}
+                    setExpandedId={setExpandedId}
+                    userProfile={userProfile}
+                  />
+                </div>
+              ))}
             </div>
           </div>
         )}

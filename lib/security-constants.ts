@@ -13,6 +13,7 @@ export const STATUS_DEPARTMENT_MAP: Record<Status, string | null> = {
   PENDING_DEPT_1: 'Fixed Network',
   PENDING_DEPT_2: 'Wire Line Planning',
   PENDING_DEPT_3: 'Engineering',
+  PENDING_INITIATOR_REVIEW: null,
   APPROVED: null,
   REJECTED: null,
 }
@@ -22,6 +23,7 @@ export const STATUS_LABELS: Record<Status, string> = {
   PENDING_DEPT_1: 'Fixed Network Review',
   PENDING_DEPT_2: 'Wire Line Planning Review',
   PENDING_DEPT_3: 'Engineering Review',
+  PENDING_INITIATOR_REVIEW: 'Back to Initiator',
   APPROVED: 'Approved',
   REJECTED: 'Rejected',
 }

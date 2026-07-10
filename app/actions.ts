@@ -270,6 +270,7 @@ export async function getRequestActivities(requestId: string) {
  * Handles progressive sequential department approvals with defense in depth.
  * - RLS policies in DB provide first layer
  * - Server-side checks provide second layer
+ * - Approvers can reject to PENDING_INITIATOR_REVIEW (initiator-only full rejection)
  * Only APPROVER role can act; responsible department for current status can APPROVE; any approver can REJECT.
  */
 export async function updateRequestStatus(requestId: string, action: 'APPROVE' | 'REJECT', comment?: string | null) {
@@ -283,7 +284,7 @@ export async function updateRequestStatus(requestId: string, action: 'APPROVE' |
 
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
-    .select('department, role')
+    .select('department, role, full_name')
     .eq('id', user.id)
     .single()
 
@@ -292,14 +293,9 @@ export async function updateRequestStatus(requestId: string, action: 'APPROVE' |
     return { success: false, error: 'Failed to authenticate department details.' }
   }
 
-  if (profile.role !== 'APPROVER') {
-    logAuthFailure(user.id, action, 'User is not an approver', { role: profile.role })
-    return { success: false, error: 'Unauthorized: Only designated Approvers can perform this action.' }
-  }
-
   const { data: request, error: requestError } = await supabase
     .from('change_requests')
-    .select('status')
+    .select('status, initiator_name')
     .eq('id', requestId)
     .single()
 
@@ -320,60 +316,85 @@ export async function updateRequestStatus(requestId: string, action: 'APPROVE' |
     return { success: false, error: 'This request has already been finalized and cannot be modified.' }
   }
 
+  const requestInitiatorName = request.initiator_name ?? ''
+  const currentUserFullName = profile.full_name ?? ''
+  const isInitiator = currentUserFullName.trim().toLowerCase() === requestInitiatorName.trim().toLowerCase()
+
   let nextStatus: RequestStatus = 'REJECTED'
 
   if (action === 'REJECT') {
-    nextStatus = 'REJECTED'
+    if (isInitiator) {
+      nextStatus = 'REJECTED'
+    } else {
+      if (profile.role !== 'APPROVER') {
+        logAuthFailure(user.id, action, 'User is not an approver', { role: profile.role })
+        return { success: false, error: 'Unauthorized: Only designated Approvers can perform this action.' }
+      }
+      nextStatus = 'PENDING_INITIATOR_REVIEW'
+    }
   } else {
-    switch (currentStatus) {
-      case 'PENDING_DEPT_1':
-        if (!isDepartmentResponsible('PENDING_DEPT_1', profile.department)) {
-          logAuthFailure(user.id, action, 'Wrong department for approval', { required: 'Fixed Network', userDept: profile.department, status: request.status })
-          return { success: false, error: 'Action denied: Only Fixed Network department approvers can approve this stage.' }
-        }
-        nextStatus = 'PENDING_DEPT_2'
-        break
-      case 'PENDING_DEPT_2':
-        if (!isDepartmentResponsible('PENDING_DEPT_2', profile.department)) {
-          logAuthFailure(user.id, action, 'Wrong department for approval', { required: 'Wire Line Planning', userDept: profile.department, status: request.status })
-          return { success: false, error: 'Action denied: Only Wire Line Planning department approvers can approve this stage.' }
-        }
-        nextStatus = 'PENDING_DEPT_3'
-        break
-      case 'PENDING_DEPT_3':
-        if (!isDepartmentResponsible('PENDING_DEPT_3', profile.department)) {
-          logAuthFailure(user.id, action, 'Wrong department for approval', { required: 'Engineering', userDept: profile.department, status: request.status })
-          return { success: false, error: 'Action denied: Only Engineering department approvers can approve this stage.' }
-        }
-        nextStatus = 'APPROVED'
-        break
-      default:
-        logAuthFailure(user.id, action, 'Invalid status for approval', { status: request.status })
-        return { success: false, error: 'This ticket is not active or has already reached a finalized state.' }
+    if (currentStatus === 'PENDING_INITIATOR_REVIEW') {
+      if (!isInitiator) {
+        logAuthFailure(user.id, action, 'Initiator action required', { required: 'Initiator', userDept: profile.department, status: request.status })
+        return { success: false, error: 'Action denied: Only the Initiator can resume this request from review.' }
+      }
+      nextStatus = 'PENDING_DEPT_1'
+    } else {
+      if (profile.role !== 'APPROVER') {
+        logAuthFailure(user.id, action, 'User is not an approver', { role: profile.role })
+        return { success: false, error: 'Unauthorized: Only designated Approvers can perform this action.' }
+      }
+
+      switch (currentStatus) {
+        case 'PENDING_DEPT_1':
+          if (!isDepartmentResponsible('PENDING_DEPT_1', profile.department)) {
+            logAuthFailure(user.id, action, 'Wrong department for approval', { required: 'Fixed Network', userDept: profile.department, status: request.status })
+            return { success: false, error: 'Action denied: Only Fixed Network department approvers can approve this stage.' }
+          }
+          nextStatus = 'PENDING_DEPT_2'
+          break
+        case 'PENDING_DEPT_2':
+          if (!isDepartmentResponsible('PENDING_DEPT_2', profile.department)) {
+            logAuthFailure(user.id, action, 'Wrong department for approval', { required: 'Wire Line Planning', userDept: profile.department, status: request.status })
+            return { success: false, error: 'Action denied: Only Wire Line Planning department approvers can approve this stage.' }
+          }
+          nextStatus = 'PENDING_DEPT_3'
+          break
+        case 'PENDING_DEPT_3':
+          if (!isDepartmentResponsible('PENDING_DEPT_3', profile.department)) {
+            logAuthFailure(user.id, action, 'Wrong department for approval', { required: 'Engineering', userDept: profile.department, status: request.status })
+            return { success: false, error: 'Action denied: Only Engineering department approvers can approve this stage.' }
+          }
+          nextStatus = 'APPROVED'
+          break
+        default:
+          logAuthFailure(user.id, action, 'Invalid status for approval', { status: request.status })
+          return { success: false, error: 'This ticket is not active or has already reached a finalized state.' }
+      }
     }
   }
 
-const { error: updateError } = await supabase
-     .from('change_requests')
-     .update({ status: nextStatus })
-     .eq('id', requestId)
+  const { error: updateError } = await supabase
+       .from('change_requests')
+       .update({ status: nextStatus })
+       .eq('id', requestId)
 
-   if (updateError) {
-     logAuthFailure(user.id, action, 'Database update failed', { updateError })
-     return { success: false, error: updateError.message }
-   }
+    if (updateError) {
+      logAuthFailure(user.id, action, 'Database update failed', { updateError })
+      return { success: false, error: updateError.message }
+    }
 
-    // Log the status change in audit log
-    await logRequestActivity(
-      requestId,
-      action === 'APPROVE' ? 'APPROVE' : 'REJECT',
-      currentStatus,
-      nextStatus,
-      action === 'REJECT' ? comment ?? null : null
-    )
+     // Log the status change in audit log
+     await logRequestActivity(
+       requestId,
+       action === 'APPROVE' ? 'APPROVE' : 'REJECT',
+       currentStatus,
+       nextStatus,
+       action === 'REJECT' ? comment ?? null : null
+     )
 
-    revalidatePath('/')
-    return { success: true, message: action === 'APPROVE' ? 'Request approved successfully' : 'Request rejected successfully' }
+     revalidatePath('/')
+     return { success: true, message: action === 'APPROVE' ? 'Request approved successfully' : 'Request rejected successfully' }
   }
 
 /**
@@ -704,7 +725,36 @@ export async function getRequestAuditLogs(requestId: string) {
     return { error: error.message, data: null }
   }
 
-  return { error: null, data: data ?? [] }
+  const logs = (data ?? []) as Database['public']['Tables']['request_audit_log']['Row'][]
+
+  const userIds = Array.from(
+    new Set(
+      logs
+        .map((log) => log.changed_by)
+        .filter((id): id is string => typeof id === 'string' && id.length > 0 && id !== 'system')
+    )
+  )
+
+  const profilesMap = new Map<string, { full_name: string | null; email: string | null }>()
+
+  if (userIds.length > 0) {
+    const { data: profiles } = await supabase
+      .from('profiles')
+      .select('id, full_name, email')
+      .in('id', userIds)
+
+    for (const profile of profiles ?? []) {
+      profilesMap.set(profile.id, { full_name: profile.full_name ?? null, email: profile.email ?? null })
+    }
+  }
+
+  const enriched = logs.map((log) => ({
+    ...log,
+    changed_by_name: profilesMap.get(log.changed_by)?.full_name ?? null,
+    changed_by_email: profilesMap.get(log.changed_by)?.email ?? null,
+  }))
+
+  return { error: null, data: enriched }
 }
 
 export async function getRequestAttachments(requestId: string) {
@@ -738,6 +788,28 @@ export async function getRequestAttachmentCount(requestId: string) {
   }
 
   return data?.length ?? 0
+}
+
+export async function getMyPendingCorrections() {
+  const supabase = await createClient()
+
+  const { data: { user }, error: userError } = await supabase.auth.getUser()
+  if (userError || !user) {
+    return { success: false, error: toErrorString(userError, 'Not authenticated'), data: [] }
+  }
+
+  const { data, error } = await supabase
+    .from('change_requests')
+    .select('*')
+    .eq('status', 'PENDING_INITIATOR_REVIEW')
+    .eq('user_id', user.id)
+    .order('created_at', { ascending: false })
+
+  if (error) {
+    return { success: false, error: error.message, data: [] }
+  }
+
+  return { success: true, error: null, data: (data ?? []) as Database['public']['Tables']['change_requests']['Row'][] }
 }
 
 export async function getFilteredChangeRequests(filters: RequestFilters) {

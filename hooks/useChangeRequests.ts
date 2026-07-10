@@ -30,6 +30,12 @@ export const ROLE_ACCESS: Record<
     locked: true,
     label: 'Engineering Review',
   },
+  PENDING_INITIATOR_REVIEW: {
+    department: 'Initiator',
+    canApprove: false,
+    locked: false,
+    label: 'Back to Initiator',
+  },
   APPROVED: { department: null, canApprove: false, locked: true, label: 'Approved' },
   REJECTED: { department: null, canApprove: false, locked: true, label: 'Rejected' },
 }

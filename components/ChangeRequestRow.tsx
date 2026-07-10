@@ -57,19 +57,14 @@ function LagBadge({ hours }: { hours: number }) {
 
 function DepartmentTimeline({ status, auditLogs, approvers }: { status: string | null; auditLogs: RequestAuditLog[] | undefined; approvers: { fixed_network_approver: string | null; wire_line_approver: string | null; engineering_approver: string | null } }) {
   const steps = STAGE_STEPS
-  const completed = (auditLogs ?? []).map((entry) => entry.new_status).filter(Boolean) as string[]
+  const completed = auditLogs?.map((entry) => entry.new_status).filter(Boolean) as string[] ?? []
   const stageLabels = STAGE_LABELS
-
-  const delegationComment = (auditLogs ?? []).find((entry) => entry.action === 'DELEGATE')?.comment ?? null
-  const delegatedTo = delegationComment?.replace(/^Delegated(?: approval)? to:?\s*/i, '') ?? null
-  const delegationStatus = delegationComment ? ((auditLogs ?? []).find((entry) => entry.action === 'DELEGATE')?.previous_status ?? null) : null
 
   return (
     <ol className="mt-4 space-y-2">
       {steps.map((step) => {
         const isComplete = completed.includes(step)
         const isCurrent = step === status
-        const isDelegated = step === delegationStatus && !!delegatedTo
         const approverField = APPROVER_FIELD[step] as keyof typeof approvers | undefined
         const approverName = approverField ? approvers[approverField] : null
         return (
@@ -94,13 +89,8 @@ function DepartmentTimeline({ status, auditLogs, approvers }: { status: string |
                 }
               >
                 {stageLabels[step] || step}
-                {isDelegated && (
-                  <span className="ml-2 text-xs font-medium text-amber-700 dark:text-amber-400">
-                    (Delegated to {delegatedTo})
-                  </span>
-                )}
               </span>
-              {approverField && approverName && !isDelegated && (
+              {approverField && approverName && (
                 <span className="ml-2 text-xs text-teal-600 dark:text-teal-400 truncate">
                   · {approverName}
                 </span>
@@ -128,7 +118,7 @@ type ChangeRequestRowProps = {
   calculateLagHours: (req: RequestWithAudit) => number
   expandedId: string | null
   setExpandedId: (id: string | null) => void
-  userProfile: { department: string | null; role: string | null; email?: string | null; id?: string | null } | null
+  userProfile: { department: string | null; role: string | null; email?: string | null } | null
 }
 
 export default function ChangeRequestRow({
@@ -143,73 +133,62 @@ export default function ChangeRequestRow({
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false)
   const [pdfError, setPdfError] = useState<string | null>(null)
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
-  const [lagHours, setLagHours] = useState<number>(0)
 
   const access = ROLE_ACCESS[req.status ?? ''] ?? ROLE_ACCESS.DRAFT
   
-  // Calculate lag hours only on client after mount to avoid hydration mismatch
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setLagHours(calculateLagHours(req))
-  }, [req.id])
-
+  const lagHours = calculateLagHours(req)
   const stale = lagHours > 48
   const projectNumber = req.project_number ?? '—'
   const initiator = req.initiated_by ?? req.initiator_name
   const description = req.change_description ?? req.description
   const priority = req.priority_level ?? '—'
 
-  useEffect(() => {
-    let isMounted = true;
+    // Fetch audit logs
+    useEffect(() => {
+      let isMounted = true;
   
-    const fetchAuditLogs = async () => {
-      if (!req.id) return;
+      const fetchAuditLogs = async () => {
+        if (!req.id) return;
   
-      setIsLoading(true);
+        setIsLoading(true);
   
-      try {
-        // Check authentication first
-        const { data: { user } } = await supabase.auth.getUser();
+        try {
+          const { data: { user } } = await supabase.auth.getUser();
   
-        if (!user) {
-          console.warn('User not authenticated - skipping audit log fetch');
-          if (isMounted) setAuditLogs([]);
-          return;
-        }
+          if (!user) {
+            console.warn('User not authenticated for audit logs');
+            if (isMounted) setAuditLogs([]);
+            return;
+          }
   
-        const { data, error } = await supabase
-          .from('request_audit_log')
-          .select('*')
-          .eq('request_id', req.id)
-          .order('timestamp', { ascending: false });   // or 'created_at' if you prefer
+          const { data, error } = await supabase
+            .from('request_audit_log')
+            .select('*')
+            .eq('request_id', req.id)
+            .order('timestamp', { ascending: false });
   
-        if (!isMounted) return;
+          if (!isMounted) return;
   
-        if (error) {
-          console.error('Failed to fetch audit logs:', error);
-          setAuditLogs([]);
-        } else {
-          setAuditLogs(data ?? []);
-        }
-      } catch (err) {
-        if (isMounted) {
+          if (error) {
+            console.error('Failed to fetch audit logs:', error);
+            setAuditLogs([]);
+          } else {
+            setAuditLogs(data ?? []);
+          }
+        } catch (err) {
           console.error('Failed to fetch audit logs:', err);
-          setAuditLogs([]);
+          if (isMounted) setAuditLogs([]);
+        } finally {
+          if (isMounted) setIsLoading(false);
         }
-      } finally {
-        if (isMounted) setIsLoading(false);
-      }
-    };
+      };
   
-    // Only fetch if we don't have data yet
-    if (!auditLogs) {
       fetchAuditLogs();
-    }
   
-    return () => {
-      isMounted = false;
-    };
-  }, [req.id]);   // Removed auditLogs from dependencies to avoid loops
+      return () => {
+        isMounted = false;
+      };
+    }, [req.id]);
 
   const handleDownloadPdf = async () => {
     setIsGeneratingPdf(true)
@@ -243,12 +222,6 @@ export default function ChangeRequestRow({
         fixed_network_approver: req.fixed_network_approver ?? '',
         wire_line_approver: req.wire_line_approver ?? '',
         engineering_approver: req.engineering_approver ?? '',
-        final_decision_by: req.status === 'APPROVED'
-          ? req.engineering_approver ?? req.wire_line_approver ?? req.fixed_network_approver ?? null
-          : req.status === 'REJECTED'
-            ? req.engineering_approver ?? req.wire_line_approver ?? req.fixed_network_approver ?? null
-            : null,
-        final_decision_reason: (auditLogs ?? []).find(log => log.new_status === 'REJECTED')?.comment ?? null,
       }
 
       const typedActivities = (activities ?? []) as RequestActivityForPdf[]
@@ -264,7 +237,6 @@ export default function ChangeRequestRow({
         executed_qty: Number(activity.executed_qty) || 0,
         reason: activity.reason ?? '—',
       }))
-
       await generatePdf(requestForPdf, activitiesForPdf)
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to generate PDF'
