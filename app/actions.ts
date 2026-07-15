@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { isDepartmentResponsible } from '@/lib/security-constants'
 import { REQUEST_STATUSES, PRIORITY_LEVELS, isStatus, isPriority, isRole, isDepartment } from '@/lib/constants'
-import { getCurrentProfile, resolveInitiatorRole } from '@/lib/auth'
+import { getCurrentProfile, getUserWithRetry, resolveInitiatorRole } from '@/lib/auth'
 import type { ChangeRequest } from '@/lib/supabase/client'
 import type { Database } from '@/types_db'
 
@@ -12,6 +12,13 @@ type UploadAttachmentInput = {
   requestId: string
   file: File
   description?: string | null
+}
+
+type UploadSitePhotoInput = {
+  requestId: string
+  file: File
+  latitude?: number | null
+  longitude?: number | null
 }
 
 type RequestStatus = (typeof REQUEST_STATUSES)[number]
@@ -32,6 +39,51 @@ function toErrorString(error: unknown, fallback: string): string {
     return (error as { message: string }).message
   }
   return fallback
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+/**
+ * Uploads a file to Supabase Storage with retry/backoff.
+ *
+ * The Supabase storage backend serializes writes through a single compaction
+ * worker ("Another write batch or compaction is already active"). When that
+ * worker is busy, uploads transiently fail with a 544 database timeout. We
+ * retry with an increasing backoff and a short settle delay between attempts
+ * so the compaction worker can drain before we write again.
+ */
+async function uploadToStorageWithRetry(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  bucket: string,
+  path: string,
+  file: File,
+  opts: { cacheControl: string; upsert: boolean },
+  label: string,
+  maxAttempts = 3
+): Promise<{ error: { message: string } | null }> {
+  let lastError: { message: string } | null = null
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    if (attempt > 0) {
+      const backoff = 500 * attempt
+      console.warn(`[${label}] storage upload attempt ${attempt + 1} after ${backoff}ms backoff`)
+      await sleep(backoff)
+    }
+    const { error } = await supabase.storage.from(bucket).upload(path, file, opts)
+    if (!error) {
+      return { error: null }
+    }
+    lastError = { message: error.message }
+    const isCompaction = /compaction|already active|timed out/i.test(error.message)
+    if (!isCompaction) {
+      return { error }
+    }
+    console.warn(`[${label}] storage upload failed (attempt ${attempt + 1}/${maxAttempts}): ${error.message}`)
+  }
+  // Settle delay so the compaction worker finishes before the caller proceeds.
+  await sleep(300)
+  return { error: lastError }
 }
 
 type ExtraFields = {
@@ -61,7 +113,7 @@ export async function logRequestActivity(
   ) {
    const supabase = await createClient()
 
-   const { data: { user } } = await supabase.auth.getUser()
+   const { user } = await getUserWithRetry(supabase, 2)
    const userId = user?.id ?? 'system'
 
    const { error } = await supabase
@@ -202,7 +254,7 @@ export async function createChangeRequest(
   const { data, error } = await supabase
    .from('change_requests')
    .insert(payload)
-   .select('id')
+   .select('*')
    .single()
 
    if (error) {
@@ -241,8 +293,14 @@ export async function createChangeRequest(
     }
   }
 
-   revalidatePath('/')
-   return { success: true, message: 'Change request created successfully', requestId: data.id, changeNumber }
+   revalidatePath('/create-request')
+   return {
+     success: true,
+     message: 'Change request created successfully',
+     requestId: data.id,
+     changeNumber,
+     request: data as Database['public']['Tables']['change_requests']['Row'],
+   }
  }
 
 /**
@@ -276,7 +334,7 @@ export async function getRequestActivities(requestId: string) {
 export async function updateRequestStatus(requestId: string, action: 'APPROVE' | 'REJECT', comment?: string | null) {
   const supabase = await createClient()
 
-  const { data: { user }, error: userError } = await supabase.auth.getUser()
+  const { user, error: userError } = await getUserWithRetry(supabase, 2)
   if (userError || !user) {
     logAuthFailure('unknown', action, 'Not authenticated')
     return { success: false, error: 'Not authenticated' }
@@ -793,9 +851,9 @@ export async function getRequestAttachmentCount(requestId: string) {
 export async function getMyPendingCorrections() {
   const supabase = await createClient()
 
-  const { data: { user }, error: userError } = await supabase.auth.getUser()
+  const { user, error: userError } = await getUserWithRetry(supabase, 2)
   if (userError || !user) {
-    return { success: false, error: toErrorString(userError, 'Not authenticated'), data: [] }
+    return { success: false, error: userError ?? 'Not authenticated', data: [] }
   }
 
   const { data, error } = await supabase
@@ -878,11 +936,11 @@ export async function uploadAttachment(input: UploadAttachmentInput): Promise<{ 
   try {
     const supabase = await createClient()
 
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
-     console.log('[uploadAttachment] getUser result:', {
-       userId: user?.id,
-       userError: userError?.message,
-     })
+     const { user, error: userError } = await getUserWithRetry(supabase, 2)
+      console.log('[uploadAttachment] getUser result:', {
+        userId: user?.id,
+        userError,
+      })
 
      if (userError || !user) {
        return { success: false, error: toErrorString(userError, 'Not authenticated') }
@@ -1047,10 +1105,100 @@ export async function uploadAttachment(input: UploadAttachmentInput): Promise<{ 
   }
 }
 
+export async function uploadSitePhoto(input: UploadSitePhotoInput): Promise<{ success: boolean; error: string | null; message?: string; attachment?: Database['public']['Tables']['request_attachments']['Row'] }> {
+  try {
+    const supabase = await createClient()
+
+    const { user, error: userError } = await getUserWithRetry(supabase, 2)
+    if (userError || !user) {
+      return { success: false, error: toErrorString(userError, 'Not authenticated') }
+    }
+
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('id, email, full_name, department, role, created_at, updated_at, is_active')
+      .eq('id', user.id)
+      .maybeSingle()
+
+    if (profileError || !profile) {
+      return { success: false, error: toErrorString(profileError, 'Profile not found') }
+    }
+
+    const requestId = input.requestId
+    const file = input.file
+    const maxFileSize = 50 * 1024 * 1024
+
+    if (file.size > maxFileSize) {
+      return { success: false, error: `File size exceeds ${maxFileSize / 1024 / 1024}MB limit` }
+    }
+
+    if (!file.type.startsWith('image/')) {
+      return { success: false, error: 'Only image files are allowed for site photos' }
+    }
+
+    const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9_\-.]+/g, '_')
+    const storedFileName = `site_photo_${Date.now()}_${sanitizedFileName}`
+    const storagePath = `${requestId}/${storedFileName}`
+
+    const { error: uploadError } = await supabase.storage
+      .from('request-attachments')
+      .upload(storagePath, file, {
+        cacheControl: '3600',
+        upsert: false,
+      })
+
+    if (uploadError) {
+      console.error('[uploadSitePhoto] storage upload failed:', uploadError)
+      return { success: false, error: uploadError.message }
+    }
+
+    const { data: inserted, error: insertError } = await supabase
+      .from('request_attachments')
+      .insert({
+        request_id: requestId,
+        original_filename: file.name,
+        filename: storedFileName,
+        file_path: storagePath,
+        file_size: file.size,
+        mime_type: file.type || 'image/jpeg',
+        version_number: 1,
+        uploaded_by: user.id,
+        description: 'Site photo with GPS coordinates',
+        latitude: input.latitude ?? null,
+        longitude: input.longitude ?? null,
+      })
+      .select('*')
+      .single()
+
+    if (insertError || !inserted) {
+      console.error('[uploadSitePhoto] metadata insert failed:', insertError)
+      await supabase.storage.from('request-attachments').remove([storagePath]).catch(() => {})
+      return { success: false, error: insertError?.message ?? 'Failed to save site photo metadata' }
+    }
+
+    revalidatePath('/')
+    revalidatePath(`/requests/${requestId}`)
+    revalidatePath(`/requests/${requestId}/audit`)
+
+    return {
+      success: true,
+      error: null,
+      message: 'Site photo uploaded successfully',
+      attachment: inserted as Database['public']['Tables']['request_attachments']['Row'],
+    }
+  } catch (err) {
+    console.error('[uploadSitePhoto] unexpected error:', err)
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : 'Unexpected upload error',
+    }
+  }
+}
+
 export async function deleteAttachment(attachmentId: string): Promise<{ success: boolean; error: string | null; message?: string }> {
   const supabase = await createClient()
 
-  const { data: { user }, error: userError } = await supabase.auth.getUser()
+  const { user, error: userError } = await getUserWithRetry(supabase, 2)
   if (userError || !user) {
     return { success: false, error: toErrorString(userError, 'Not authenticated') }
   }
@@ -1108,7 +1256,7 @@ export async function deleteAttachment(attachmentId: string): Promise<{ success:
 export async function getAttachmentPreviewUrl(filePath: string, expiresInSeconds = 3600): Promise<{ success: boolean; error: string | null; url: string | null }> {
   const supabase = await createClient()
 
-  const { data: { user }, error: userError } = await supabase.auth.getUser()
+  const { user, error: userError } = await getUserWithRetry(supabase, 2)
   if (userError || !user) {
     return { success: false, error: toErrorString(userError, 'Not authenticated'), url: null }
   }
@@ -1138,11 +1286,11 @@ export async function testAttachmentSystem() {
   try {
     const supabase = await createClient()
 
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
-    console.log('[testAttachmentSystem] getUser:', { userId: user?.id, userError: userError?.message })
+    const { user, error: userError } = await getUserWithRetry(supabase, 2)
+    console.log('[testAttachmentSystem] getUser result:', { userId: user?.id, userError })
 
     if (userError || !user) {
-      return { success: false, error: toErrorString(userError, 'Not authenticated'), url: null }
+      return { success: false, error: toErrorString(userError, 'Not authenticated') }
     }
 
     const { data: profile, error: profileError } = await supabase

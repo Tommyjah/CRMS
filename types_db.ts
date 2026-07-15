@@ -239,6 +239,8 @@ export type Database = {
           file_size: number;
           filename: string;
           id: string;
+          latitude: number | null;
+          longitude: number | null;
           mime_type: string;
           original_filename: string;
           request_id: string;
@@ -253,6 +255,8 @@ export type Database = {
           file_size?: number;
           filename: string;
           id?: string;
+          latitude?: number | null;
+          longitude?: number | null;
           mime_type: string;
           original_filename: string;
           request_id: string;
@@ -267,6 +271,8 @@ export type Database = {
           file_size?: number;
           filename?: string;
           id?: string;
+          latitude?: number | null;
+          longitude?: number | null;
           mime_type?: string;
           original_filename?: string;
           request_id?: string;

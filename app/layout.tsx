@@ -13,23 +13,6 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const HYDRATION_ERROR_PATTERNS = [
-  'hydration',
-  'server rendered html',
-  'content did not match',
-  'bis_skin_checked',
-];
-
-const isHydrationError = (...args: unknown[]): boolean => {
-  const message = args
-    .map((arg) => (typeof arg === 'string' ? arg : ''))
-    .join(' ')
-    .toLowerCase();
-  return HYDRATION_ERROR_PATTERNS.some((pattern) =>
-    message.includes(pattern.toLowerCase())
-  );
-};
-
 export const metadata: Metadata = {
   title: {
     default: 'CRMS — Change Request Management',
@@ -65,8 +48,16 @@ export default function RootLayout({
               (() => {
                 try {
                   var __origConsoleError = console.error;
+                  var HYDRATION_ERROR_PATTERNS = ['hydration','server rendered html','content did not match','bis_skin_checked'];
+                  function isHydrationError() {
+                    var message = Array.prototype.slice.call(arguments)
+                      .map(function(arg){ return typeof arg==='string'?arg:''; })
+                      .join(' ')
+                      .toLowerCase();
+                    return HYDRATION_ERROR_PATTERNS.some(function(pattern){ return message.indexOf(pattern.toLowerCase())!==-1; });
+                  }
                   console.error = function () {
-                    if (isHydrationError.apply(this, arguments)) {
+                    if (typeof isHydrationError==='function' && isHydrationError.apply(this, arguments)) {
                       return;
                     }
                     __origConsoleError.apply(console, arguments);

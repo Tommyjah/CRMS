@@ -10,7 +10,7 @@ import { STATUS_STYLES, STATUS_DOT_COLORS, STAGE_STEPS, STAGE_LABELS, APPROVER_F
 import StatusButtons from '@/components/StatusButtons'
 import ChangeRequestDrawer from '@/components/ChangeRequestDrawer'
 
-import { getRequestActivities } from '@/app/actions'
+import { getRequestActivities, getRequestAttachments } from '@/app/actions'
 
 type ChangeRequestWithDetails = ChangeRequest & {
   project_number?: string | null
@@ -55,6 +55,38 @@ function LagBadge({ hours }: { hours: number }) {
   )
 }
 
+function getLatestAuditTarget(
+  stage: string,
+  logs: RequestAuditLog[] | undefined,
+  action: 'DELEGATE' | 'ESCALATE',
+  commentPattern: RegExp
+): string | null {
+  if (!logs?.length) return null
+
+  const matching = logs.filter(
+    (log) =>
+      log.action === action &&
+      (log.previous_status === stage || log.new_status === stage)
+  )
+  if (matching.length === 0) return null
+
+  const latest = [...matching].sort((a, b) => {
+    const aTime = new Date(a.timestamp || a.created_at || 0).getTime()
+    const bTime = new Date(b.timestamp || b.created_at || 0).getTime()
+    return bTime - aTime
+  })[0]
+
+  return latest.comment?.match(commentPattern)?.[1]?.trim() || null
+}
+
+function getDelegatedToForStage(stage: string, logs: RequestAuditLog[] | undefined): string | null {
+  return getLatestAuditTarget(stage, logs, 'DELEGATE', /Delegated approval to\s+(.+)/i)
+}
+
+function getEscalatedToForStage(stage: string, logs: RequestAuditLog[] | undefined): string | null {
+  return getLatestAuditTarget(stage, logs, 'ESCALATE', /Escalated to\s+(.+)/i)
+}
+
 function DepartmentTimeline({ status, auditLogs, approvers }: { status: string | null; auditLogs: RequestAuditLog[] | undefined; approvers: { fixed_network_approver: string | null; wire_line_approver: string | null; engineering_approver: string | null } }) {
   const steps = STAGE_STEPS
   const completed = auditLogs?.map((entry) => entry.new_status).filter(Boolean) as string[] ?? []
@@ -67,6 +99,17 @@ function DepartmentTimeline({ status, auditLogs, approvers }: { status: string |
         const isCurrent = step === status
         const approverField = APPROVER_FIELD[step] as keyof typeof approvers | undefined
         const approverName = approverField ? approvers[approverField] : null
+        const delegatedTo = getDelegatedToForStage(step, auditLogs)
+        const escalatedTo = getEscalatedToForStage(step, auditLogs)
+        const timelineLabel = [
+          stageLabels[step] || step,
+          approverName ? `- ${approverName}` : null,
+          delegatedTo ? `(Delegated to ${delegatedTo})` : null,
+          escalatedTo ? `(Escalated to ${escalatedTo})` : null,
+        ]
+          .filter(Boolean)
+          .join(' ')
+
         return (
           <li key={step} className="flex items-center gap-2">
             <span
@@ -88,13 +131,8 @@ function DepartmentTimeline({ status, auditLogs, approvers }: { status: string |
                       : 'text-sm text-slate-500 dark:text-zinc-400'
                 }
               >
-                {stageLabels[step] || step}
+                {timelineLabel}
               </span>
-              {approverField && approverName && (
-                <span className="ml-2 text-xs text-teal-600 dark:text-teal-400 truncate">
-                  · {approverName}
-                </span>
-              )}
             </div>
             {isCurrent && <span className="text-xs text-slate-500 dark:text-zinc-400 shrink-0">(current)</span>}
           </li>
@@ -201,9 +239,40 @@ export default function ChangeRequestRow({
         throw new Error(error)
       }
 
+      const { data: attachments } = await getRequestAttachments(req.id)
+      const sitePhotos = (attachments ?? [])
+        .filter((a) => a.mime_type.startsWith('image/'))
+        .map((a) => ({
+          url: `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/request-attachments/${a.file_path}`,
+          latitude: a.latitude ?? null,
+          longitude: a.longitude ?? null,
+        }))
+
+      const regularAttachments = (attachments ?? [])
+        .filter((a) => !a.mime_type.startsWith('image/'))
+        .map((a) => ({
+          original_filename: a.original_filename,
+          file_size: a.file_size,
+          mime_type: a.mime_type,
+          file_path: a.file_path,
+        }))
+
+      const imageAttachmentsForPdf = (attachments ?? [])
+        .filter((a) => a.mime_type.startsWith('image/'))
+        .map((a) => ({
+          original_filename: a.original_filename,
+          file_size: a.file_size,
+          mime_type: a.mime_type,
+          file_path: a.file_path,
+          latitude: a.latitude ?? null,
+          longitude: a.longitude ?? null,
+        }))
+
       const requestForPdf: RequestData = {
         project_name: req.project_name ?? '—',
         project_number: projectNumber,
+        change_number: req.change_number ?? null,
+        change_type: req.change_type ?? null,
         initiator_name: req.initiator_name ?? '—',
         change_description: description ?? '',
         description: req.description ?? '',
@@ -212,6 +281,18 @@ export default function ChangeRequestRow({
         created_at: req.created_at ?? new Date().toISOString(),
         updated_at: req.updated_at ?? new Date().toISOString(),
         site_coordinates: req.site_coordinates ?? '',
+        latitude: (() => {
+          const raw = req.site_coordinates || ''
+          const parts = raw.split(',').map((s) => s.trim()).filter(Boolean)
+          const lat = parts[0]
+          return lat ? Number(lat) : null
+        })(),
+        longitude: (() => {
+          const raw = req.site_coordinates || ''
+          const parts = raw.split(',').map((s) => s.trim()).filter(Boolean)
+          const lng = parts[1]
+          return lng ? Number(lng) : null
+        })(),
         route_impact: req.route_impact ?? '',
         duct_sizes: req.duct_sizes ?? '',
         material_cost_variation: req.material_cost_variation ?? '',
@@ -222,6 +303,8 @@ export default function ChangeRequestRow({
         fixed_network_approver: req.fixed_network_approver ?? '',
         wire_line_approver: req.wire_line_approver ?? '',
         engineering_approver: req.engineering_approver ?? '',
+        attachments: [...regularAttachments, ...imageAttachmentsForPdf],
+        site_photos: sitePhotos,
       }
 
       const typedActivities = (activities ?? []) as RequestActivityForPdf[]

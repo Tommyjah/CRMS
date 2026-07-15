@@ -2,13 +2,14 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import type { ChangeRequest, RequestAuditLog } from '@/lib/supabase/client'
+import type { ChangeRequest, RequestAuditLog, RequestAttachment } from '@/lib/supabase/client'
 import { supabase } from '@/lib/supabase/client'
 import { STAGE_STEPS, STAGE_LABELS, APPROVER_FIELD } from '@/lib/constants'
 import AuditTimeline from './AuditTimeline'
 import AttachmentUpload from './AttachmentUpload'
 import AttachmentList from './AttachmentList'
-import { getRequestActivities } from '@/app/actions'
+import SitePhotoCapture from './SitePhotoCapture'
+import { getRequestActivities, getRequestAttachments, getAttachmentPreviewUrl } from '@/app/actions'
 
 interface ChangeRequestDrawerProps {
   request: ChangeRequest | null
@@ -17,10 +18,13 @@ interface ChangeRequestDrawerProps {
 }
 
 export default function ChangeRequestDrawer({ request, isOpen, onClose }: ChangeRequestDrawerProps) {
-  const [isAnimating, setIsAnimating] = useState(false)
-  const [auditLogs, setAuditLogs] = useState<Record<string, RequestAuditLog[]>>({})
-  const [activities, setActivities] = useState<{ serial_number: number; activity: string; unit: string | null; length: number | null; width: number | null; depth: number | null; contract_qty: string | null; executed_qty: string | null; reason: string | null }[]>([])
-  const [isLoadingActivities, setIsLoadingActivities] = useState(false)
+const [isAnimating, setIsAnimating] = useState(false)
+   const [auditLogs, setAuditLogs] = useState<Record<string, RequestAuditLog[]>>({})
+   const [activities, setActivities] = useState<{ serial_number: number; activity: string; unit: string | null; length: number | null; width: number | null; depth: number | null; contract_qty: string | null; executed_qty: string | null; reason: string | null }[]>([])
+   const [isLoadingActivities, setIsLoadingActivities] = useState(false)
+   const [sitePhotos, setSitePhotos] = useState<RequestAttachment[]>([])
+   const [isLoadingPhotos, setIsLoadingPhotos] = useState(false)
+   const [attachmentListVersion, setAttachmentListVersion] = useState(0)
 
   useEffect(() => {
     if (isOpen) {
@@ -73,6 +77,34 @@ export default function ChangeRequestDrawer({ request, isOpen, onClose }: Change
     }
   }, [request?.id])
 
+  useEffect(() => {
+    if (!request?.id) return
+    let isMounted = true
+    const fetchSitePhotos = async () => {
+      setIsLoadingPhotos(true)
+      try {
+        const { data, error } = await getRequestAttachments(request.id)
+        if (!isMounted) return
+        if (error) {
+          setSitePhotos([])
+        } else {
+          const images = (data ?? []).filter(
+            (a) => a.mime_type.startsWith('image/') && (a.description || '').toLowerCase().includes('site photo')
+          )
+          setSitePhotos(images)
+        }
+      } catch {
+        if (isMounted) setSitePhotos([])
+      } finally {
+        if (isMounted) setIsLoadingPhotos(false)
+      }
+    }
+    fetchSitePhotos()
+    return () => {
+      isMounted = false
+    }
+  }, [request?.id])
+
   const handleClose = () => {
     setIsAnimating(false)
     setTimeout(onClose, 300)
@@ -86,6 +118,35 @@ export default function ChangeRequestDrawer({ request, isOpen, onClose }: Change
       return '—'
     }
   }
+
+  /** Latest target name for a stage action from audit logs. */
+  const getLatestAuditTarget = (
+    stage: string,
+    logs: RequestAuditLog[],
+    action: 'DELEGATE' | 'ESCALATE',
+    commentPattern: RegExp
+  ): string | null => {
+    const matching = logs.filter(
+      (log) =>
+        log.action === action &&
+        (log.previous_status === stage || log.new_status === stage)
+    )
+    if (matching.length === 0) return null
+
+    const latest = [...matching].sort((a, b) => {
+      const aTime = new Date(a.timestamp || a.created_at || 0).getTime()
+      const bTime = new Date(b.timestamp || b.created_at || 0).getTime()
+      return bTime - aTime
+    })[0]
+
+    return latest.comment?.match(commentPattern)?.[1]?.trim() || null
+  }
+
+  const getDelegatedToForStage = (stage: string, logs: RequestAuditLog[]): string | null =>
+    getLatestAuditTarget(stage, logs, 'DELEGATE', /Delegated approval to\s+(.+)/i)
+
+  const getEscalatedToForStage = (stage: string, logs: RequestAuditLog[]): string | null =>
+    getLatestAuditTarget(stage, logs, 'ESCALATE', /Escalated to\s+(.+)/i)
 
   if (!request) return null
 
@@ -195,28 +256,96 @@ export default function ChangeRequestDrawer({ request, isOpen, onClose }: Change
                   </div>
                 </section>
 
-                {/* Location & Route Details */}
-                <section className="space-y-4">
-                  <h3 className="text-sm font-semibold text-slate-900 dark:text-zinc-100">Location & Route Details</h3>
-                  <div className="grid grid-cols-2 gap-4 rounded-lg border border-slate-200/80 dark:border-zinc-800/80 bg-slate-50/30 dark:bg-zinc-800/20 p-4">
-                    <div>
-                      <span className="text-xs font-medium text-slate-500 dark:text-zinc-400">Site Coordinates</span>
-                      <p className="mt-1 text-sm text-slate-700 dark:text-zinc-300">{request.site_coordinates || '—'}</p>
-                    </div>
-                    <div>
-                      <span className="text-xs font-medium text-slate-500 dark:text-zinc-400">Target Segments</span>
-                      <p className="mt-1 text-sm text-slate-700 dark:text-zinc-300">{request.target_segments || '—'}</p>
-                    </div>
-                    <div className="col-span-2">
-                      <span className="text-xs font-medium text-slate-500 dark:text-zinc-400">Route Impact</span>
-                      <p className="mt-1 text-sm text-slate-700 dark:text-zinc-300">{request.route_impact || '—'}</p>
-                    </div>
-                    <div className="col-span-2">
-                      <span className="text-xs font-medium text-slate-500 dark:text-zinc-400">Route Deviations</span>
-                      <p className="mt-1 text-sm text-slate-700 dark:text-zinc-300">{request.route_deviations || '—'}</p>
-                    </div>
-                  </div>
-                </section>
+                 {/* Location & Route Details */}
+                 <section className="space-y-4">
+                   <h3 className="text-sm font-semibold text-slate-900 dark:text-zinc-100">Location & Route Details</h3>
+                    <div className="grid grid-cols-2 gap-4 rounded-lg border border-slate-200/80 dark:border-zinc-800/80 bg-slate-50/30 dark:bg-zinc-800/20 p-4">
+                      {(() => {
+                        let lat = ''
+                        let lng = ''
+                        const raw = request.site_coordinates || ''
+                        const parts = raw.split(',').map((s) => s.trim()).filter(Boolean)
+                        if (parts.length >= 2) {
+                          lat = parts[0]
+                          lng = parts[1]
+                        } else if (sitePhotos.length > 0 && sitePhotos[0].latitude != null && sitePhotos[0].longitude != null) {
+                          lat = String(sitePhotos[0].latitude)
+                          lng = String(sitePhotos[0].longitude)
+                        }
+                        const hasCoords = lat.length > 0 && lng.length > 0
+                        if (!hasCoords) return null
+                        return (
+                          <>
+                            <div>
+                              <span className="text-xs font-medium text-slate-500 dark:text-zinc-400">Latitude:</span>
+                              <p className="mt-1 text-sm text-slate-700 dark:text-zinc-300">{lat}</p>
+                            </div>
+                            <div>
+                              <span className="text-xs font-medium text-slate-500 dark:text-zinc-400">Longitude:</span>
+                              <p className="mt-1 text-sm text-slate-700 dark:text-zinc-300">{lng}</p>
+                            </div>
+                          </>
+                        )
+                      })()}
+                     <div>
+                       <span className="text-xs font-medium text-slate-500 dark:text-zinc-400">Target Segments</span>
+                       <p className="mt-1 text-sm text-slate-700 dark:text-zinc-300">{request.target_segments || '—'}</p>
+                     </div>
+                     <div className="col-span-2">
+                       <span className="text-xs font-medium text-slate-500 dark:text-zinc-400">Route Impact</span>
+                       <p className="mt-1 text-sm text-slate-700 dark:text-zinc-300">{request.route_impact || '—'}</p>
+                     </div>
+                     <div className="col-span-2">
+                       <span className="text-xs font-medium text-slate-500 dark:text-zinc-400">Route Deviations</span>
+                       <p className="mt-1 text-sm text-slate-700 dark:text-zinc-300">{request.route_deviations || '—'}</p>
+                     </div>
+                   </div>
+
+                   {/* Site Photos */}
+                   <div className="rounded-lg border border-slate-200/80 dark:border-zinc-800/80 bg-slate-50/30 dark:bg-zinc-800/20 p-4 space-y-4">
+                     <h4 className="text-xs font-medium text-slate-500 dark:text-zinc-400 uppercase tracking-wider">Site Photos</h4>
+                     {isLoadingPhotos ? (
+                       <p className="text-sm text-slate-500 dark:text-zinc-400">Loading photos...</p>
+                     ) : sitePhotos.length === 0 ? (
+                       <p className="text-sm text-slate-500 dark:text-zinc-400 italic">No site photos captured yet.</p>
+                     ) : (
+                       <div className="grid grid-cols-2 gap-3">
+                         {sitePhotos.map((photo) => (
+                           <div key={photo.id} className="overflow-hidden rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-900">
+                             <img
+                               src={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/request-attachments/${photo.file_path}`}
+                               alt={photo.original_filename}
+                               className="w-full h-40 object-cover"
+                               onClick={async () => {
+                                 const { url } = await getAttachmentPreviewUrl(photo.file_path)
+                                 if (url) window.open(url, '_blank')
+                               }}
+                             />
+                             <div className="p-2 space-y-1">
+                               <p className="text-xs font-medium text-slate-900 dark:text-zinc-100 truncate">{photo.original_filename}</p>
+                               {photo.latitude != null && photo.longitude != null ? (
+                                 <p className="text-[10px] text-slate-500 dark:text-zinc-400">
+                                   GPS: {Number(photo.latitude).toFixed(6)}, {Number(photo.longitude).toFixed(6)}
+                                 </p>
+                               ) : (
+                                 <p className="text-[10px] text-slate-400 dark:text-zinc-500">No GPS data</p>
+                               )}
+                             </div>
+                           </div>
+                         ))}
+                       </div>
+                     )}
+                     <SitePhotoCapture
+                       requestId={request.id}
+                       onPhotoUploaded={(attachment) => {
+                         setSitePhotos((prev) => {
+                           if (prev.some((p) => p.id === attachment.id)) return prev
+                           return [attachment, ...prev]
+                         })
+                       }}
+                     />
+                   </div>
+                 </section>
 
                 {/* Technical Specifications */}
                 <section className="space-y-4">
@@ -314,12 +443,21 @@ export default function ChangeRequestDrawer({ request, isOpen, onClose }: Change
                   </div>
                 </section>
 
-                {/* Attachments */}
-                <section className="space-y-4">
-                  <h3 className="text-sm font-semibold text-slate-900 dark:text-zinc-100">Attachments</h3>
-                  <AttachmentList requestId={request.id} />
-                  <AttachmentUpload requestId={request.id} />
-                </section>
+{/* Attachments */}
+                  <section className="space-y-4">
+                    <h3 className="text-sm font-semibold text-slate-900 dark:text-zinc-100">Attachments</h3>
+                    <AttachmentList 
+                      key={`attachment-list-${attachmentListVersion}`} 
+                      requestId={request.id} 
+                      hideHeading
+                      excludeSitePhotos
+                    />
+                    <AttachmentUpload 
+                      requestId={request.id} 
+                      hideHeading
+                      onUploaded={() => setAttachmentListVersion(v => v + 1)} 
+                    />
+                  </section>
 
                 {/* Approval Progress Tracker */}
                 <section className="space-y-4">
@@ -331,6 +469,18 @@ export default function ChangeRequestDrawer({ request, isOpen, onClose }: Change
                         const isComplete = stage === 'DRAFT' || (request.status === 'APPROVED' && stage === 'APPROVED') || (request.status !== 'APPROVED' && stage !== request.status && stage !== 'APPROVED')
                         const approverField = APPROVER_FIELD[stage]
                         const approverName = approverField ? (request as Record<string, string | null | undefined>)?.[approverField] : null
+                        const logs = auditLogs[request.id] ?? []
+                        const delegatedTo = getDelegatedToForStage(stage, logs)
+                        const escalatedTo = getEscalatedToForStage(stage, logs)
+                        const stageLabel = STAGE_LABELS[stage]
+                        const timelineLabel = [
+                          stageLabel,
+                          approverName ? `- ${approverName}` : null,
+                          delegatedTo ? `(Delegated to ${delegatedTo})` : null,
+                          escalatedTo ? `(Escalated to ${escalatedTo})` : null,
+                        ]
+                          .filter(Boolean)
+                          .join(' ')
 
                         return (
                           <li key={stage} className="relative">
@@ -339,11 +489,11 @@ export default function ChangeRequestDrawer({ request, isOpen, onClose }: Change
                             </div>
                             <div className="ml-6">
                               <p className={`text-sm font-medium ${isActive ? 'text-teal-900 dark:text-teal-300' : isComplete ? 'text-emerald-900 dark:text-emerald-300' : 'text-slate-500 dark:text-zinc-400'}`}>
-                                {STAGE_LABELS[stage]}
+                                {timelineLabel}
                               </p>
-                              {approverField && (
-                                <p className={`text-xs mt-0.5 ${approverName ? 'text-teal-600 dark:text-teal-400 font-medium' : 'text-slate-400 dark:text-zinc-500 italic'}`}>
-                                  {approverName ? `Assigned: ${approverName}` : 'Unassigned'}
+                              {approverField && !approverName && (
+                                <p className="text-xs mt-0.5 text-slate-400 dark:text-zinc-500 italic">
+                                  Unassigned
                                 </p>
                               )}
                             </div>

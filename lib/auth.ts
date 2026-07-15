@@ -35,15 +35,23 @@ async function withAuthRetry<T>(fn: () => Promise<T>): Promise<T> {
 
 async function getUserWithRetry(
   supabase: SupabaseClient<Database>,
-  maxAttempts: number = 2,
+  maxAttempts: number = 3,
 ): Promise<{ user: { id: string; email?: string | null } | null; error: string | null }> {
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     const { data: { user }, error: userError } = await supabase.auth.getUser()
     if (!userError && user) {
       return { user, error: null }
     }
+
     if (attempt < maxAttempts - 1) {
-      await new Promise(resolve => setTimeout(resolve, 250))
+      if (attempt === 0 && (!user || userError)) {
+        try {
+          await supabase.auth.refreshSession()
+        } catch {
+          // ignore refresh failures and continue with retry
+        }
+      }
+      await new Promise(resolve => setTimeout(resolve, 200 * (attempt + 1)))
     }
   }
   const finalError = 'Auth session missing or expired'

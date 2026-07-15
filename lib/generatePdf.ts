@@ -26,6 +26,8 @@ export interface RequestData {
   created_at?: string | null
   updated_at?: string | null
   site_coordinates?: string | null
+  latitude?: number | null
+  longitude?: number | null
   route_impact?: string | null
   duct_sizes?: string | null
   material_cost_variation?: string | null
@@ -41,6 +43,8 @@ export interface RequestData {
   work_order?: string | null
   change_number?: string | null
   change_type?: string | null
+  site_photos?: { url: string; latitude?: number | null; longitude?: number | null }[]
+  attachments?: { original_filename: string; file_size: number; mime_type: string; file_path: string; latitude?: number | null; longitude?: number | null }[]
 }
 
 export async function generatePdf(request: RequestData, activities: Activity[]) {
@@ -82,35 +86,21 @@ export async function generatePdf(request: RequestData, activities: Activity[]) 
     doc.rect(margin, currentY + 18, contentWidth, 3, 'F')
     currentY += 26
 
-    // --- 2. CHANGE NUMBER BANNER ---
-    if (request.change_number) {
-      const bannerHeight = 9
-      doc.setFillColor(240, 253, 244)
-      doc.roundedRect(margin, currentY, contentWidth, bannerHeight, 2, 2, 'F')
-      doc.setDrawColor(...brandGreen)
-      doc.setLineWidth(0.4)
-      doc.roundedRect(margin, currentY, contentWidth, bannerHeight, 2, 2, 'S')
-
-      doc.setFont('helvetica', 'bold')
-      doc.setFontSize(9)
-      doc.setTextColor(0, 100, 50)
-      doc.text('Change Number:', margin + 3, currentY + 5)
-      doc.setFont('helvetica', 'normal')
-      doc.setFontSize(13)
-      doc.setTextColor(0, 0, 0)
-      doc.text(request.change_number, margin + 38, currentY + 5)
-      currentY += bannerHeight + 2
-    }
-
     // --- 3. PART 1: CHANGE REQUEST INFORMATION ---
     doc.setFont('helvetica', 'bold')
     doc.setFontSize(12)
-    doc.setTextColor(0, 80, 40)
+    doc.setTextColor(...brandGreen)
     doc.text('PART 1: CHANGE REQUEST INFORMATION', margin, currentY)
     currentY += 2
     doc.setDrawColor(...brandGreen)
     doc.setLineWidth(0.5)
     doc.line(margin, currentY, pageWidth - margin, currentY)
+    currentY += 3
+
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(10)
+    doc.setTextColor(...brandGreen)
+    doc.text('Change Description', margin, currentY)
     currentY += 3
 
     // Submission date
@@ -222,8 +212,10 @@ export async function generatePdf(request: RequestData, activities: Activity[]) 
     doc.text(descLines.slice(0, 2), margin + 2 + descLabelW, currentY + 4)
     currentY += descBoxH + 2
 
+    currentY += 2
+
     // --- 4. MAIN ACTIVITIES TABLE ---
-    if (currentY > pageHeight - 60) {
+    if (currentY > pageHeight - 80) {
       doc.addPage()
       currentY = margin
     }
@@ -232,7 +224,7 @@ export async function generatePdf(request: RequestData, activities: Activity[]) 
     doc.setFontSize(10)
     doc.setTextColor(...brandGreen)
     doc.text('Main Activities', margin, currentY)
-    currentY += 2
+    currentY += 4
 
     const tableHeaders = [['S/No', 'Main Activity', 'Unit', 'L(m)', 'W(m)', 'D(m)', 'Contract Qty', 'Executed Qty', 'Difference', 'Reason']]
     const tableRows = activities.map((act, index) => {
@@ -524,6 +516,134 @@ export async function generatePdf(request: RequestData, activities: Activity[]) 
 
       currentY += 10
     })
+
+    // --- 8. PAGE 2: ATTACHMENTS & SITE PHOTOS ---
+    doc.addPage()
+    currentY = margin
+
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(12)
+    doc.setTextColor(...brandGreen)
+    doc.text('ATTACHMENTS & SUPPORTING DOCUMENTS', margin, currentY)
+    currentY += 3
+    doc.setDrawColor(...brandGreen)
+    doc.setLineWidth(0.5)
+    doc.line(margin, currentY, pageWidth - margin, currentY)
+    currentY += 4
+
+    const attachments = request.attachments ?? []
+    const nonImageAttachments = attachments.filter((a) => !a.mime_type.startsWith('image/'))
+    const imageAttachments = attachments.filter((a) => a.mime_type.startsWith('image/'))
+
+    if (nonImageAttachments.length === 0) {
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(9)
+      doc.setTextColor(120, 120, 120)
+      doc.text('No regular attachments uploaded.', margin, currentY)
+      currentY += 8
+    } else {
+      nonImageAttachments.forEach((file) => {
+        if (currentY > pageHeight - 20) {
+          doc.addPage()
+          currentY = margin
+        }
+
+        doc.setFont('helvetica', 'bold')
+        doc.setFontSize(9)
+        doc.setTextColor(0, 0, 0)
+        doc.text(file.original_filename, margin, currentY + 4)
+
+        doc.setFont('helvetica', 'normal')
+        doc.setFontSize(8)
+        doc.setTextColor(80, 80, 80)
+        const sizeText = `${(file.file_size / 1024).toFixed(1)} KB`
+        doc.text(`${file.mime_type}    ${sizeText}`, margin + contentWidth - doc.getTextWidth(`${file.mime_type}    ${sizeText}`) - 2, currentY + 4)
+
+        doc.setDrawColor(180, 180, 180)
+        doc.setLineWidth(0.1)
+        doc.rect(margin, currentY, contentWidth, 7)
+        currentY += 9
+      })
+      currentY += 3
+    }
+
+    if (imageAttachments.length > 0) {
+      if (currentY > pageHeight - 80) {
+        doc.addPage()
+        currentY = margin
+      }
+
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(11)
+      doc.setTextColor(...brandGreen)
+      doc.text('Site Photos', margin, currentY)
+      currentY += 4
+
+      const photoSize = 50
+      const photosPerRow = Math.max(1, Math.floor(contentWidth / (photoSize + 4)))
+      let rowY = currentY
+
+      imageAttachments.forEach((photo, idx) => {
+        const colIdx = idx % photosPerRow
+        const rowIdx = Math.floor(idx / photosPerRow)
+        const x = margin + colIdx * (photoSize + 4)
+        const y = rowY + rowIdx * (photoSize + 14)
+        const photoUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/request-attachments/${photo.file_path}`
+
+        if (y + photoSize + 14 > pageHeight - 20) {
+          doc.addPage()
+          rowY = margin
+          const newY = rowY
+          imageAttachments.slice(idx).forEach((p, i2) => {
+            const cIdx = i2 % photosPerRow
+            const rIdx = Math.floor(i2 / photosPerRow)
+            const px = margin + cIdx * (photoSize + 4)
+            const py = newY + rIdx * (photoSize + 14)
+            const pUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/request-attachments/${p.file_path}`
+            try {
+              doc.addImage(pUrl, 'JPEG', px, py, photoSize, photoSize)
+            } catch {
+              doc.setDrawColor(180, 180, 180)
+              doc.setLineWidth(0.3)
+              doc.rect(px, py, photoSize, photoSize)
+              doc.setFont('helvetica', 'normal')
+              doc.setFontSize(8)
+              doc.setTextColor(120, 120, 120)
+              doc.text('Photo unavailable', px + 4, py + photoSize / 2 + 2)
+            }
+            if (p.latitude != null && p.longitude != null) {
+              doc.setFont('helvetica', 'normal')
+              doc.setFontSize(7)
+              doc.setTextColor(80, 80, 80)
+              doc.text(`GPS: ${Number(p.latitude).toFixed(4)}, ${Number(p.longitude).toFixed(4)}`, px, py + photoSize + 3)
+            }
+          })
+          currentY = rowY + Math.ceil(imageAttachments.length / photosPerRow) * (photoSize + 14) + 4
+          return
+        }
+
+        try {
+          doc.addImage(photoUrl, 'JPEG', x, y, photoSize, photoSize)
+        } catch {
+          doc.setDrawColor(180, 180, 180)
+          doc.setLineWidth(0.3)
+          doc.rect(x, y, photoSize, photoSize)
+          doc.setFont('helvetica', 'normal')
+          doc.setFontSize(8)
+          doc.setTextColor(120, 120, 120)
+          doc.text('Photo unavailable', x + 4, y + photoSize / 2 + 2)
+        }
+
+        if (photo.latitude != null && photo.longitude != null) {
+          doc.setFont('helvetica', 'normal')
+          doc.setFontSize(7)
+          doc.setTextColor(80, 80, 80)
+          doc.text(`GPS: ${Number(photo.latitude).toFixed(4)}, ${Number(photo.longitude).toFixed(4)}`, x, y + photoSize + 3)
+        }
+      })
+
+      currentY = rowY + Math.ceil(imageAttachments.length / photosPerRow) * (photoSize + 14) + 4
+    }
 
     // Footer
     const footerY = pageHeight - 12

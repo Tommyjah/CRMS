@@ -10,6 +10,7 @@ const MAX_SIZE_BYTES = MAX_SIZE_MB * 1024 * 1024
 interface AttachmentUploadProps {
   requestId: string
   onUploaded?: (attachment: RequestAttachment) => void
+  hideHeading?: boolean
 }
 
 const ACCEPTED_EXTENSIONS = [
@@ -55,7 +56,7 @@ function formatFileSize(bytes: number): string {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i]
 }
 
-export default function AttachmentUpload({ requestId, onUploaded }: AttachmentUploadProps) {
+export default function AttachmentUpload({ requestId, onUploaded, hideHeading = false }: AttachmentUploadProps) {
   const [files, setFiles] = useState<File[]>([])
   const [isUploading, setIsUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
@@ -152,8 +153,10 @@ export default function AttachmentUpload({ requestId, onUploaded }: AttachmentUp
   }
 
   return (
-    <div className="mt-4 rounded-lg border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 p-4">
-      <h4 className="text-sm font-semibold text-slate-900 dark:text-zinc-100 mb-3">Upload Attachments</h4>
+    <div className="rounded-lg border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 p-4">
+      {!hideHeading && (
+        <h4 className="text-sm font-semibold text-slate-900 dark:text-zinc-100 mb-3">Upload Attachments</h4>
+      )}
 
       <div
         className={`relative rounded-lg border-2 border-dashed transition-colors ${

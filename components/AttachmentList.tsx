@@ -8,6 +8,9 @@ import AttachmentPreviewModal from './AttachmentPreviewModal'
 
 interface AttachmentListProps {
   requestId: string
+  excludeImages?: boolean
+  excludeSitePhotos?: boolean
+  hideHeading?: boolean
 }
 
 function formatFileSize(bytes: number): string {
@@ -42,7 +45,7 @@ function getIconBg(type: string): string {
   return colors[type] ?? colors.FILE
 }
 
-export default function AttachmentList({ requestId }: AttachmentListProps) {
+export default function AttachmentList({ requestId, excludeImages = false, excludeSitePhotos = false, hideHeading = false }: AttachmentListProps) {
   const [attachments, setAttachments] = useState<RequestAttachment[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -57,7 +60,12 @@ export default function AttachmentList({ requestId }: AttachmentListProps) {
       setError(error)
       setAttachments([])
     } else {
-      setAttachments(data ?? [])
+      const filtered = (data ?? []).filter((a) => {
+        if (excludeImages && a.mime_type.startsWith('image/')) return false
+        if (excludeSitePhotos && (a.description || '').toLowerCase().includes('site photo')) return false
+        return true
+      })
+      setAttachments(filtered)
     }
     setLoading(false)
   }
@@ -111,15 +119,17 @@ export default function AttachmentList({ requestId }: AttachmentListProps) {
   }
 
   return (
-    <div className="mt-4">
-      <div className="flex items-center justify-between">
-        <h4 className="text-sm font-semibold text-slate-900 dark:text-zinc-100">Attachments</h4>
-        {attachments.length > 0 && (
-          <span className="text-xs text-slate-500 dark:text-zinc-400">
-            {attachments.length} file{attachments.length > 1 ? 's' : ''}
-          </span>
-        )}
-      </div>
+    <div className={hideHeading ? '' : 'mt-4'}>
+      {!hideHeading && (
+        <div className="flex items-center justify-between">
+          <h4 className="text-sm font-semibold text-slate-900 dark:text-zinc-100">Attachments</h4>
+          {attachments.length > 0 && (
+            <span className="text-xs text-slate-500 dark:text-zinc-400">
+              {attachments.length} file{attachments.length > 1 ? 's' : ''}
+            </span>
+          )}
+        </div>
+      )}
 
       {attachments.length === 0 ? (
         <p className="mt-2 text-sm text-slate-500 dark:text-zinc-400 italic">No attachments yet</p>
